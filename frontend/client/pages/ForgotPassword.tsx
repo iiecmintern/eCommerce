@@ -5,16 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  ArrowRight, 
+import {
+  ArrowRight,
   ArrowLeft,
-  Mail, 
+  Mail,
   CheckCircle,
   AlertCircle,
   Zap,
   Store,
   Shield,
-  Clock
+  Clock,
 } from "lucide-react";
 
 export default function ForgotPassword() {
@@ -43,13 +43,13 @@ export default function ForgotPassword() {
 
     setIsLoading(true);
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     setIsLoading(false);
     setIsEmailSent(true);
   };
 
   return (
-    <Layout hideSidebar={true}>
+    <Layout>
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-accent/5 to-background flex items-center justify-center p-6">
         <div className="w-full max-w-md">
           {/* Header */}
@@ -74,10 +74,11 @@ export default function ForgotPassword() {
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl">Reset Your Password</CardTitle>
                 <p className="text-muted-foreground">
-                  Enter your email address and we'll send you a link to reset your password
+                  Enter your email address and we'll send you a link to reset
+                  your password
                 </p>
               </CardHeader>
-              
+
               <CardContent className="space-y-6">
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
@@ -88,7 +89,7 @@ export default function ForgotPassword() {
                         id="email"
                         type="email"
                         placeholder="Enter your email"
-                        className={`pl-9 ${error ? 'border-red-500' : ''}`}
+                        className={`pl-9 ${error ? "border-red-500" : ""}`}
                         value={email}
                         onChange={(e) => {
                           setEmail(e.target.value);
@@ -104,8 +105,8 @@ export default function ForgotPassword() {
                     )}
                   </div>
 
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
                     disabled={isLoading}
                   >
@@ -121,8 +122,8 @@ export default function ForgotPassword() {
                 </form>
 
                 <div className="text-center">
-                  <Link 
-                    to="/login" 
+                  <Link
+                    to="/login"
                     className="text-sm text-muted-foreground hover:text-foreground flex items-center justify-center"
                   >
                     <ArrowLeft className="h-3 w-3 mr-1" />
@@ -137,10 +138,11 @@ export default function ForgotPassword() {
                 <div className="inline-flex p-4 rounded-full bg-green-100 text-green-600 mb-6">
                   <CheckCircle className="h-8 w-8" />
                 </div>
-                
+
                 <h2 className="text-2xl font-bold mb-4">Check Your Email</h2>
                 <p className="text-muted-foreground mb-6">
-                  We've sent a password reset link to <span className="font-medium">{email}</span>
+                  We've sent a password reset link to{" "}
+                  <span className="font-medium">{email}</span>
                 </p>
 
                 <div className="space-y-4">
@@ -150,20 +152,20 @@ export default function ForgotPassword() {
                   </div>
 
                   <div className="space-y-3">
-                    <Button 
+                    <Button
                       onClick={() => {
                         setIsEmailSent(false);
                         setEmail("");
                       }}
-                      variant="outline" 
+                      variant="outline"
                       className="w-full"
                     >
                       Try Different Email
                     </Button>
-                    
-                    <Button 
+
+                    <Button
                       onClick={handleSubmit}
-                      variant="ghost" 
+                      variant="ghost"
                       className="w-full text-sm"
                       disabled={isLoading}
                     >
@@ -183,7 +185,8 @@ export default function ForgotPassword() {
                 <div className="text-sm">
                   <h4 className="font-medium mb-1">Security Notice</h4>
                   <p className="text-muted-foreground">
-                    For your security, password reset links can only be used once and expire after 15 minutes.
+                    For your security, password reset links can only be used
+                    once and expire after 15 minutes.
                   </p>
                 </div>
               </div>

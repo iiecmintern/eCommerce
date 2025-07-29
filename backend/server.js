@@ -29,6 +29,12 @@ const connectDB = async () => {
   }
 };
 
+// Import routes
+const authRoutes = require('./routes/auth/authRoutes');
+
+// API Routes
+app.use('/api/auth', authRoutes);
+
 // Test MongoDB connection endpoint
 app.get("/test-db", async (req, res) => {
   try {
@@ -66,6 +72,11 @@ app.get("/", (req, res) => {
     message: "CommerceForge API is running",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "development",
+    endpoints: {
+      auth: "/api/auth",
+      health: "/health",
+      dbTest: "/test-db"
+    }
   });
 });
 
@@ -85,6 +96,24 @@ app.get("/health", (req, res) => {
   res.json(health);
 });
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    message: 'Something went wrong!',
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+  });
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found`
+  });
+});
+
 // Start server
 const startServer = async () => {
   const dbConnected = await connectDB();
@@ -95,6 +124,7 @@ const startServer = async () => {
     console.log(`🔗 API URL: http://localhost:${PORT}`);
     console.log(`🏥 Health Check: http://localhost:${PORT}/health`);
     console.log(`🧪 DB Test: http://localhost:${PORT}/test-db`);
+    console.log(`🔐 Auth API: http://localhost:${PORT}/api/auth`);
 
     if (!dbConnected) {
       console.log(
