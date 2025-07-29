@@ -98,61 +98,6 @@ export default function SignIn() {
     }
   };
 
-  const quickAccessAccounts = [
-    {
-      role: "Admin",
-      email: "admin@demo.com",
-      description: "Full platform management access",
-      icon: <Shield className="h-5 w-5" />,
-    },
-    {
-      role: "Vendor",
-      email: "vendor@demo.com",
-      description: "Store management and analytics",
-      icon: <Store className="h-5 w-5" />,
-    },
-    {
-      role: "Customer",
-      email: "customer@demo.com",
-      description: "Shopping and order management",
-      icon: <Users className="h-5 w-5" />,
-    },
-  ];
-
-  const handleDemoLogin = async (email: string) => {
-    setFormData((prev) => ({ ...prev, email, password: "Demo123!" }));
-
-    // Auto-submit after setting the demo credentials
-    setTimeout(async () => {
-      setIsLoading(true);
-
-      try {
-        const result = await login(email, "Demo123!");
-
-        if (result.success) {
-          toast({
-            title: "Demo login successful!",
-            description: result.message,
-          });
-        } else {
-          toast({
-            title: "Demo login failed",
-            description: result.message,
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        toast({
-          title: "Demo login failed",
-          description: "An unexpected error occurred. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    }, 100);
-  };
-
   return (
     <Layout>
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-accent/5 to-background flex items-center justify-center p-6">
@@ -396,47 +341,6 @@ export default function SignIn() {
                     </Link>
                   </p>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Demo Accounts */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Quick Demo Access</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Try different user roles with one click
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {quickAccessAccounts.map((account, index) => (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    className="w-full justify-start text-left h-auto p-4"
-                    onClick={() => handleDemoLogin(account.email)}
-                    disabled={isLoading}
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                        {account.icon}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-medium">{account.role}</span>
-                          <Badge variant="secondary" className="text-xs">
-                            Demo
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {account.description}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {account.email}
-                        </p>
-                      </div>
-                    </div>
-                  </Button>
-                ))}
               </CardContent>
             </Card>
           </div>

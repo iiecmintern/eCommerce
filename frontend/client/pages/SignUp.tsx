@@ -41,7 +41,7 @@ export default function SignUp() {
     company: "",
     password: "",
     confirmPassword: "",
-    role: "customer" as "customer" | "vendor",
+    role: "customer" as "customer",
     agreeToTerms: false,
     agreeToMarketing: false,
   });
@@ -149,32 +149,17 @@ export default function SignUp() {
 
   const strength = passwordStrength(formData.password);
 
-  const roleOptions = [
-    {
-      value: "customer",
-      title: "Customer",
-      description: "Shop and purchase products",
-      icon: <ShoppingBag className="h-5 w-5" />,
-      features: [
-        "Browse products",
-        "Make purchases",
-        "Track orders",
-        "Manage profile",
-      ],
-    },
-    {
-      value: "vendor",
-      title: "Vendor",
-      description: "Sell products and manage store",
-      icon: <Store className="h-5 w-5" />,
-      features: [
-        "Create store",
-        "List products",
-        "Manage orders",
-        "Analytics dashboard",
-      ],
-    },
-  ];
+  const customerInfo = {
+    title: "Customer Account",
+    description: "Shop and purchase products",
+    icon: <ShoppingBag className="h-5 w-5" />,
+    features: [
+      "Browse products",
+      "Make purchases",
+      "Track orders",
+      "Manage profile",
+    ],
+  };
 
   return (
     <Layout>
@@ -408,45 +393,34 @@ export default function SignUp() {
                   </div>
                 </div>
 
-                {/* Role Selection */}
+                {/* Account Type Info */}
                 <div className="space-y-3">
                   <Label>Account Type</Label>
-                  <RadioGroup
-                    value={formData.role}
-                    onValueChange={(value) => handleInputChange("role", value)}
-                    className="grid grid-cols-1 gap-4"
-                  >
-                    {roleOptions.map((option) => (
-                      <div
-                        key={option.value}
-                        className="flex items-center space-x-3"
-                      >
-                        <RadioGroupItem
-                          value={option.value}
-                          id={option.value}
-                        />
-                        <Label
-                          htmlFor={option.value}
-                          className="flex-1 cursor-pointer"
-                        >
-                          <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-                            <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                              {option.icon}
-                            </div>
-                            <div className="flex-1">
-                              <div className="font-medium">{option.title}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {option.description}
-                              </div>
-                              <div className="text-xs text-muted-foreground mt-1">
-                                {option.features.join(" • ")}
-                              </div>
-                            </div>
-                          </div>
-                        </Label>
+                  <div className="p-3 rounded-lg border bg-muted/30">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                        {customerInfo.icon}
                       </div>
-                    ))}
-                  </RadioGroup>
+                      <div className="flex-1">
+                        <div className="font-medium">{customerInfo.title}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {customerInfo.description}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {customerInfo.features.join(" • ")}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Want to become a vendor?{" "}
+                    <Link
+                      to="/get-started"
+                      className="text-primary hover:underline"
+                    >
+                      Get started here
+                    </Link>
+                  </div>
                 </div>
 
                 {/* Password */}
