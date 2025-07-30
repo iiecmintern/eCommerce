@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNavigate } from "react-router-dom";
 import {
   Store,
   Palette,
@@ -25,10 +26,12 @@ import {
   Package,
   MessageSquare,
   Eye,
-  Play
+  Play,
 } from "lucide-react";
 
 export default function Features() {
+  const navigate = useNavigate();
+
   const featureCategories = [
     {
       id: "business-models",
@@ -39,24 +42,40 @@ export default function Features() {
         {
           name: "Single Vendor Stores",
           description: "Traditional e-commerce for individual businesses",
-          benefits: ["Quick setup", "Full customization", "Direct customer relationships"]
+          benefits: [
+            "Quick setup",
+            "Full customization",
+            "Direct customer relationships",
+          ],
         },
         {
           name: "Multi-Vendor Marketplaces",
           description: "Amazon-style platforms with multiple sellers",
-          benefits: ["Commission management", "Vendor onboarding", "Centralized operations"]
+          benefits: [
+            "Commission management",
+            "Vendor onboarding",
+            "Centralized operations",
+          ],
         },
         {
           name: "Subscription Services",
           description: "Recurring billing and subscription management",
-          benefits: ["Flexible billing cycles", "Dunning management", "Customer retention tools"]
+          benefits: [
+            "Flexible billing cycles",
+            "Dunning management",
+            "Customer retention tools",
+          ],
         },
         {
           name: "Service Bookings",
           description: "Appointment-based business management",
-          benefits: ["Calendar integration", "Time slot management", "Service packages"]
-        }
-      ]
+          benefits: [
+            "Calendar integration",
+            "Time slot management",
+            "Service packages",
+          ],
+        },
+      ],
     },
     {
       id: "storefront",
@@ -67,19 +86,31 @@ export default function Features() {
         {
           name: "Visual Page Builder",
           description: "Drag-and-drop interface for creating stunning pages",
-          benefits: ["No coding required", "Real-time preview", "Mobile-responsive"]
+          benefits: [
+            "No coding required",
+            "Real-time preview",
+            "Mobile-responsive",
+          ],
         },
         {
           name: "Professional Templates",
           description: "Industry-specific designs for every business type",
-          benefits: ["Over 100 templates", "Customizable layouts", "Brand consistency"]
+          benefits: [
+            "Over 100 templates",
+            "Customizable layouts",
+            "Brand consistency",
+          ],
         },
         {
           name: "Mobile-First Design",
           description: "Optimized for mobile shopping experiences",
-          benefits: ["Touch-friendly interface", "Fast loading", "App-like experience"]
-        }
-      ]
+          benefits: [
+            "Touch-friendly interface",
+            "Fast loading",
+            "App-like experience",
+          ],
+        },
+      ],
     },
     {
       id: "ai-tools",
@@ -90,32 +121,70 @@ export default function Features() {
         {
           name: "Content Generation",
           description: "AI-powered product descriptions and SEO content",
-          benefits: ["Auto-generated copy", "SEO optimization", "Multi-language support"]
+          benefits: [
+            "Auto-generated copy",
+            "SEO optimization",
+            "Multi-language support",
+          ],
         },
         {
           name: "Smart Recommendations",
           description: "Personalized product suggestions for customers",
-          benefits: ["Increased sales", "Better user experience", "Dynamic pricing"]
+          benefits: [
+            "Increased sales",
+            "Better user experience",
+            "Dynamic pricing",
+          ],
         },
         {
           name: "Fraud Detection",
           description: "Advanced security with AI-powered fraud prevention",
-          benefits: ["Real-time monitoring", "Risk assessment", "Automated blocking"]
-        }
-      ]
-    }
+          benefits: [
+            "Real-time monitoring",
+            "Risk assessment",
+            "Automated blocking",
+          ],
+        },
+      ],
+    },
   ];
 
   const keyMetrics = [
-    { label: "Average Setup Time", value: "15 minutes", icon: <Zap className="h-4 w-4" /> },
-    { label: "Performance Improvement", value: "3.2x faster", icon: <TrendingUp className="h-4 w-4" /> },
-    { label: "Conversion Rate Boost", value: "+34%", icon: <BarChart3 className="h-4 w-4" /> },
-    { label: "Customer Satisfaction", value: "98%", icon: <Star className="h-4 w-4" /> }
+    {
+      label: "Average Setup Time",
+      value: "15 minutes",
+      icon: <Zap className="h-4 w-4" />,
+    },
+    {
+      label: "Performance Improvement",
+      value: "3.2x faster",
+      icon: <TrendingUp className="h-4 w-4" />,
+    },
+    {
+      label: "Conversion Rate Boost",
+      value: "+34%",
+      icon: <BarChart3 className="h-4 w-4" />,
+    },
+    {
+      label: "Customer Satisfaction",
+      value: "98%",
+      icon: <Star className="h-4 w-4" />,
+    },
   ];
 
   const integrations = [
-    "Stripe", "PayPal", "Square", "Shopify", "WooCommerce", "Salesforce",
-    "HubSpot", "Mailchimp", "Google Analytics", "Facebook Pixel", "Zapier", "AWS"
+    "Stripe",
+    "PayPal",
+    "Square",
+    "Shopify",
+    "WooCommerce",
+    "Salesforce",
+    "HubSpot",
+    "Mailchimp",
+    "Google Analytics",
+    "Facebook Pixel",
+    "Zapier",
+    "AWS",
   ];
 
   return (
@@ -123,23 +192,28 @@ export default function Features() {
       <div className="space-y-12 p-6">
         {/* Header */}
         <div className="text-center max-w-4xl mx-auto">
-          <Badge variant="outline" className="mb-4">Platform Features</Badge>
+          <Badge variant="outline" className="mb-4">
+            Platform Features
+          </Badge>
           <h1 className="text-4xl md:text-5xl font-bold mb-6">
             Everything You Need to Build
-            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent"> Modern Commerce</span>
+            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              {" "}
+              Modern Commerce
+            </span>
           </h1>
           <p className="text-xl text-muted-foreground mb-8">
-            From AI-powered storefronts to global payment processing, we've built every feature
-            you need to compete with industry giants and scale globally.
+            From AI-powered storefronts to global payment processing, we've
+            built every feature you need to compete with industry giants and
+            scale globally.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-gradient-to-r from-primary to-accent">
+            <Button
+              size="lg"
+              className="bg-gradient-to-r from-primary to-accent"
+            >
               <Play className="h-5 w-5 mr-2" />
               Watch Demo
-            </Button>
-            <Button size="lg" variant="outline">
-              <Eye className="h-5 w-5 mr-2" />
-              View Pricing
             </Button>
           </div>
         </div>
@@ -153,7 +227,9 @@ export default function Features() {
                   {metric.icon}
                 </div>
                 <div className="text-2xl font-bold">{metric.value}</div>
-                <div className="text-sm text-muted-foreground">{metric.label}</div>
+                <div className="text-sm text-muted-foreground">
+                  {metric.label}
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -169,14 +245,19 @@ export default function Features() {
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center p-12">
               <div className="text-white max-w-2xl">
-                <h3 className="text-3xl font-bold mb-4">Built for Modern Commerce</h3>
+                <h3 className="text-3xl font-bold mb-4">
+                  Built for Modern Commerce
+                </h3>
                 <p className="text-xl text-white/90 mb-6">
-                  Our platform combines cutting-edge technology with intuitive design
-                  to deliver exceptional commerce experiences.
+                  Our platform combines cutting-edge technology with intuitive
+                  design to deliver exceptional commerce experiences.
                 </p>
                 <div className="flex space-x-4">
                   <Button variant="secondary">Explore Features</Button>
-                  <Button variant="outline" className="border-white text-white hover:bg-white/10">
+                  <Button
+                    variant="outline"
+                    className="border-white text-white hover:bg-white/10"
+                  >
                     View Documentation
                   </Button>
                 </div>
@@ -194,7 +275,11 @@ export default function Features() {
           </TabsList>
 
           {featureCategories.map((category) => (
-            <TabsContent key={category.id} value={category.id} className="space-y-8">
+            <TabsContent
+              key={category.id}
+              value={category.id}
+              className="space-y-8"
+            >
               <div className="text-center">
                 <div className="inline-flex p-4 rounded-full bg-primary/10 text-primary mb-4">
                   {category.icon}
@@ -215,7 +300,9 @@ export default function Features() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-muted-foreground mb-4">{feature.description}</p>
+                      <p className="text-muted-foreground mb-4">
+                        {feature.description}
+                      </p>
                       <ul className="space-y-2">
                         {feature.benefits.map((benefit, i) => (
                           <li key={i} className="flex items-center text-sm">
@@ -237,26 +324,78 @@ export default function Features() {
           <div className="text-center">
             <h2 className="text-3xl font-bold mb-4">Complete Feature Set</h2>
             <p className="text-lg text-muted-foreground">
-              Every tool you need to build, manage, and scale your commerce business
+              Every tool you need to build, manage, and scale your commerce
+              business
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { icon: <ShoppingCart className="h-6 w-6" />, title: "Product Management", desc: "Variants, inventory, bundles, and AI categorization" },
-              { icon: <Users className="h-6 w-6" />, title: "Vendor Tools", desc: "Complete vendor onboarding and management system" },
-              { icon: <CreditCard className="h-6 w-6" />, title: "Payments", desc: "Multi-currency, BNPL, wallets, and smart couponing" },
-              { icon: <Truck className="h-6 w-6" />, title: "Fulfillment", desc: "Dynamic shipping, courier APIs, and tracking" },
-              { icon: <FileText className="h-6 w-6" />, title: "Order Management", desc: "Complete order lifecycle and refund automation" },
-              { icon: <MessageSquare className="h-6 w-6" />, title: "Customer Loyalty", desc: "Reviews, referrals, and gamification tools" },
-              { icon: <Globe className="h-6 w-6" />, title: "Globalization", desc: "Multi-language, multi-currency, regional rules" },
-              { icon: <BarChart3 className="h-6 w-6" />, title: "Analytics", desc: "Advanced reporting and business intelligence" },
-              { icon: <Smartphone className="h-6 w-6" />, title: "Mobile Apps", desc: "Auto-generated PWA and native applications" },
-              { icon: <Shield className="h-6 w-6" />, title: "Security", desc: "GDPR compliance, 2FA, and content moderation" },
-              { icon: <Crown className="h-6 w-6" />, title: "White Label", desc: "Multi-tenant SaaS with custom branding" },
-              { icon: <Settings className="h-6 w-6" />, title: "Integrations", desc: "1000+ apps and custom API connections" }
+              {
+                icon: <ShoppingCart className="h-6 w-6" />,
+                title: "Product Management",
+                desc: "Variants, inventory, bundles, and AI categorization",
+              },
+              {
+                icon: <Users className="h-6 w-6" />,
+                title: "Vendor Tools",
+                desc: "Complete vendor onboarding and management system",
+              },
+              {
+                icon: <CreditCard className="h-6 w-6" />,
+                title: "Payments",
+                desc: "Multi-currency, BNPL, wallets, and smart couponing",
+              },
+              {
+                icon: <Truck className="h-6 w-6" />,
+                title: "Fulfillment",
+                desc: "Dynamic shipping, courier APIs, and tracking",
+              },
+              {
+                icon: <FileText className="h-6 w-6" />,
+                title: "Order Management",
+                desc: "Complete order lifecycle and refund automation",
+              },
+              {
+                icon: <MessageSquare className="h-6 w-6" />,
+                title: "Customer Loyalty",
+                desc: "Reviews, referrals, and gamification tools",
+              },
+              {
+                icon: <Globe className="h-6 w-6" />,
+                title: "Globalization",
+                desc: "Multi-language, multi-currency, regional rules",
+              },
+              {
+                icon: <BarChart3 className="h-6 w-6" />,
+                title: "Analytics",
+                desc: "Advanced reporting and business intelligence",
+              },
+              {
+                icon: <Smartphone className="h-6 w-6" />,
+                title: "Mobile Apps",
+                desc: "Auto-generated PWA and native applications",
+              },
+              {
+                icon: <Shield className="h-6 w-6" />,
+                title: "Security",
+                desc: "GDPR compliance, 2FA, and content moderation",
+              },
+              {
+                icon: <Crown className="h-6 w-6" />,
+                title: "White Label",
+                desc: "Multi-tenant SaaS with custom branding",
+              },
+              {
+                icon: <Settings className="h-6 w-6" />,
+                title: "Integrations",
+                desc: "1000+ apps and custom API connections",
+              },
             ].map((feature, index) => (
-              <Card key={index} className="group hover:shadow-lg transition-all duration-300">
+              <Card
+                key={index}
+                className="group hover:shadow-lg transition-all duration-300"
+              >
                 <CardContent className="p-6">
                   <div className="flex items-start space-x-4">
                     <div className="p-3 rounded-lg bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
@@ -264,7 +403,9 @@ export default function Features() {
                     </div>
                     <div>
                       <h3 className="font-semibold mb-2">{feature.title}</h3>
-                      <p className="text-sm text-muted-foreground">{feature.desc}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {feature.desc}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -303,14 +444,16 @@ export default function Features() {
           <CardContent className="p-12 text-center">
             <h3 className="text-3xl font-bold mb-4">Ready to Get Started?</h3>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-              Join thousands of businesses who have chosen CommerceForge to power their success.
+              Join thousands of businesses who have chosen CommerceForge to
+              power their success.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="secondary">
+              <Button
+                size="lg"
+                variant="secondary"
+                onClick={() => navigate("/get-started")}
+              >
                 Start Free Trial
-              </Button>
-              <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10">
-                Schedule Demo
               </Button>
             </div>
           </CardContent>

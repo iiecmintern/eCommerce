@@ -370,17 +370,7 @@ export default function Index() {
               </Link>
             </Button>
 
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-white/20 text-white hover:bg-white/10"
-              asChild
-            >
-              <Link to="/contact">
-                <Headphones className="h-5 w-5 mr-2" />
-                Talk to Sales
-              </Link>
-            </Button>
+            
           </div>
         </div>
       </section>
