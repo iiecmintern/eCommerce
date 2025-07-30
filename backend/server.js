@@ -15,6 +15,9 @@ app.use(morgan("combined"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve static files from uploads directory
+app.use("/uploads", express.static("uploads"));
+
 // MongoDB Connection
 const connectDB = async () => {
   try {
@@ -30,10 +33,12 @@ const connectDB = async () => {
 };
 
 // Import routes
-const authRoutes = require('./routes/auth/authRoutes');
+const authRoutes = require("./routes/auth/authRoutes");
+const profileRoutes = require("./routes/auth/profileRoutes");
 
 // API Routes
-app.use('/api/auth', authRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/profile", profileRoutes);
 
 // Test MongoDB connection endpoint
 app.get("/test-db", async (req, res) => {
@@ -75,8 +80,8 @@ app.get("/", (req, res) => {
     endpoints: {
       auth: "/api/auth",
       health: "/health",
-      dbTest: "/test-db"
-    }
+      dbTest: "/test-db",
+    },
   });
 });
 
@@ -101,16 +106,19 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
     success: false,
-    message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    message: "Something went wrong!",
+    error:
+      process.env.NODE_ENV === "development"
+        ? err.message
+        : "Internal server error",
   });
 });
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use("*", (req, res) => {
   res.status(404).json({
     success: false,
-    message: `Route ${req.originalUrl} not found`
+    message: `Route ${req.originalUrl} not found`,
   });
 });
 

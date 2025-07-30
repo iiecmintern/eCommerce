@@ -428,7 +428,7 @@ export function Sidebar({
                       <Button
                         size="sm"
                         className="w-10 h-10 p-0 rounded-full"
-                        title="Profile"
+                        title="User"
                       >
                         <Avatar className="h-8 w-8">
                           <AvatarImage src="" alt={user.firstName} />

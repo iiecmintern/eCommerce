@@ -1,19 +1,26 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { 
-  ShoppingCart, 
-  Search, 
-  Menu, 
-  User, 
-  Store, 
+import {
+  ShoppingCart,
+  Search,
+  Menu,
+  User,
+  Store,
   Zap,
   Globe,
   LogOut,
   Settings,
-  Shield
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,11 +34,11 @@ export function Header() {
   const getDashboardLink = () => {
     if (!user) return "/login";
     switch (user.role) {
-      case 'admin':
+      case "admin":
         return "/admin";
-      case 'vendor':
+      case "vendor":
         return "/vendor";
-      case 'customer':
+      case "customer":
         return "/customer";
       default:
         return "/";
@@ -40,11 +47,11 @@ export function Header() {
 
   const getRoleIcon = () => {
     switch (user?.role) {
-      case 'admin':
+      case "admin":
         return <Shield className="h-4 w-4" />;
-      case 'vendor':
+      case "vendor":
         return <Store className="h-4 w-4" />;
-      case 'customer':
+      case "customer":
         return <User className="h-4 w-4" />;
       default:
         return <User className="h-4 w-4" />;
@@ -53,14 +60,14 @@ export function Header() {
 
   const getRoleLabel = () => {
     switch (user?.role) {
-      case 'admin':
-        return 'Admin';
-      case 'vendor':
-        return 'Vendor';
-      case 'customer':
-        return 'Customer';
+      case "admin":
+        return "Admin";
+      case "vendor":
+        return "Vendor";
+      case "customer":
+        return "Customer";
       default:
-        return 'User';
+        return "User";
     }
   };
 
@@ -92,7 +99,7 @@ export function Header() {
             <Globe className="h-4 w-4 mr-2" />
             Global
           </Button>
-          
+
           <Button variant="ghost" size="sm">
             <Search className="h-4 w-4" />
             <span className="sr-only">Search</span>
@@ -101,11 +108,15 @@ export function Header() {
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Button
+                  variant="ghost"
+                  className="relative h-8 w-8 rounded-full"
+                >
                   <Avatar className="h-8 w-8">
                     <AvatarImage src="" alt={user.firstName} />
                     <AvatarFallback className="bg-primary text-primary-foreground">
-                      {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                      {user.firstName.charAt(0)}
+                      {user.lastName.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -121,7 +132,9 @@ export function Header() {
                     </p>
                     <div className="flex items-center space-x-1 mt-1">
                       {getRoleIcon()}
-                      <span className="text-xs text-muted-foreground">{getRoleLabel()}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {getRoleLabel()}
+                      </span>
                     </div>
                   </div>
                 </DropdownMenuLabel>
@@ -132,6 +145,14 @@ export function Header() {
                     <span>Dashboard</span>
                   </Link>
                 </DropdownMenuItem>
+
+                <DropdownMenuItem asChild>
+                  <Link to="/profile">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+
                 <DropdownMenuItem asChild>
                   <Link to="/settings">
                     <Settings className="mr-2 h-4 w-4" />
@@ -156,7 +177,11 @@ export function Header() {
                 <Link to="/login">Sign In</Link>
               </Button>
 
-              <Button size="sm" className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90" asChild>
+              <Button
+                size="sm"
+                className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+                asChild
+              >
                 <Link to="/signup">Get Started</Link>
               </Button>
             </>

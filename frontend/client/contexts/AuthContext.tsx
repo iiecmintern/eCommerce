@@ -1,11 +1,17 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 
 interface User {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
-  role: 'customer' | 'vendor' | 'admin';
+  role: "customer" | "vendor" | "admin";
   isEmailVerified: boolean;
   company?: string;
   phone?: string;
@@ -16,8 +22,13 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
-  register: (userData: RegisterData) => Promise<{ success: boolean; message: string }>;
+  login: (
+    email: string,
+    password: string,
+  ) => Promise<{ success: boolean; message: string }>;
+  register: (
+    userData: RegisterData,
+  ) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
 }
@@ -29,7 +40,7 @@ interface RegisterData {
   phone?: string;
   company?: string;
   password: string;
-  role: 'customer' | 'vendor';
+  role: "customer" | "vendor";
   agreeToTerms: boolean;
   agreeToMarketing: boolean;
 }
@@ -39,7 +50,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -54,23 +65,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   // API base URL
-  const API_BASE_URL = 'http://localhost:5000/api';
+  const API_BASE_URL = "http://localhost:5000/api";
 
   // Load user from localStorage on mount
   useEffect(() => {
     const loadUser = () => {
       try {
-        const storedToken = localStorage.getItem('authToken');
-        const storedUser = localStorage.getItem('user');
-        
+        const storedToken = localStorage.getItem("authToken");
+        const storedUser = localStorage.getItem("user");
+
         if (storedToken && storedUser) {
           setToken(storedToken);
           setUser(JSON.parse(storedUser));
         }
       } catch (error) {
-        console.error('Error loading user from localStorage:', error);
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
+        console.error("Error loading user from localStorage:", error);
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("user");
       } finally {
         setIsLoading(false);
       }
@@ -81,16 +92,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Save user and token to localStorage
   const saveAuthData = (userData: User, authToken: string) => {
-    localStorage.setItem('authToken', authToken);
-    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem("authToken", authToken);
+    localStorage.setItem("user", JSON.stringify(userData));
     setUser(userData);
     setToken(authToken);
   };
 
   // Clear auth data
   const clearAuthData = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("user");
     setUser(null);
     setToken(null);
   };
@@ -99,11 +110,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      
+
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password }),
       });
@@ -117,8 +128,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { success: false, message: data.message };
       }
     } catch (error) {
-      console.error('Login error:', error);
-      return { success: false, message: 'Network error. Please try again.' };
+      console.error("Login error:", error);
+      return { success: false, message: "Network error. Please try again." };
     } finally {
       setIsLoading(false);
     }
@@ -128,11 +139,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (userData: RegisterData) => {
     try {
       setIsLoading(true);
-      
+
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(userData),
       });
@@ -146,8 +157,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { success: false, message: data.message };
       }
     } catch (error) {
-      console.error('Registration error:', error);
-      return { success: false, message: 'Network error. Please try again.' };
+      console.error("Registration error:", error);
+      return { success: false, message: "Network error. Please try again." };
     } finally {
       setIsLoading(false);
     }
@@ -163,7 +174,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (user) {
       const updatedUser = { ...user, ...userData };
       setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      localStorage.setItem("user", JSON.stringify(updatedUser));
     }
   };
 
@@ -177,9 +188,5 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     updateUser,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-}; 
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
