@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +35,7 @@ interface ProfileData {
   phone?: string;
   company?: string;
   role: string;
+  profilePicture?: string;
 }
 
 interface PasswordData {
@@ -54,6 +56,7 @@ export default function Profile() {
     phone: "",
     company: "",
     role: "",
+    profilePicture: "",
   });
 
   const [passwordData, setPasswordData] = useState<PasswordData>({
@@ -65,6 +68,7 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
@@ -80,6 +84,7 @@ export default function Profile() {
         phone: user.phone || "",
         company: user.company || "",
         role: user.role || "",
+        profilePicture: user.profilePicture || "",
       });
     }
   }, [user]);
@@ -212,6 +217,139 @@ export default function Profile() {
     }
   };
 
+  const handleImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Error",
+        description: "Please select a valid image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "Image size must be less than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("profilePicture", file);
+
+      const response = await fetch(
+        "http://localhost:5000/api/profile/picture",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+          body: formData,
+        },
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Profile picture uploaded successfully",
+        });
+
+        // Update local state and user context
+        setProfileData((prev) => ({
+          ...prev,
+          profilePicture: data.data.profilePicture,
+        }));
+
+        // Update user context
+        updateUser({
+          ...user!,
+          profilePicture: data.data.profilePicture,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: data.message || "Failed to upload image",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload image",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingImage(false);
+      // Reset file input
+      event.target.value = "";
+    }
+  };
+
+  const handleDeleteImage = async () => {
+    if (!profileData.profilePicture) return;
+
+    setIsUploadingImage(true);
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/profile/picture",
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        },
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Profile picture deleted successfully",
+        });
+
+        // Update local state and user context
+        setProfileData((prev) => ({
+          ...prev,
+          profilePicture: "",
+        }));
+
+        // Update user context
+        updateUser({
+          ...user!,
+          profilePicture: "",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: data.message || "Failed to delete image",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete image",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
   const getRoleIcon = () => {
     switch (profileData.role) {
       case "admin":
@@ -252,8 +390,8 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <Layout>
+      <div className="max-w-4xl mx-auto space-y-6 p-6">
         {/* Header */}
         <div className="flex items-center space-x-4">
           <Button
@@ -282,34 +420,61 @@ export default function Profile() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-col items-center space-y-4">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage
-                    src=""
-                    alt={`${profileData.firstName} ${profileData.lastName}`}
-                  />
-                  <AvatarFallback className="text-lg">
-                    {profileData.firstName?.charAt(0)}
-                    {profileData.lastName?.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="h-24 w-24">
+                    <AvatarImage
+                      src={
+                        profileData.profilePicture
+                          ? `http://localhost:5000${profileData.profilePicture}`
+                          : ""
+                      }
+                      alt={`${profileData.firstName} ${profileData.lastName}`}
+                    />
+                    <AvatarFallback className="text-lg">
+                      {profileData.firstName?.charAt(0)}
+                      {profileData.lastName?.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  {isUploadingImage && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                    </div>
+                  )}
+                </div>
 
                 <div className="space-y-2 w-full">
                   <Label
                     htmlFor="profile-picture"
-                    className="flex items-center space-x-2 cursor-pointer"
+                    className="flex items-center space-x-2 cursor-pointer hover:text-primary transition-colors"
                   >
                     <Camera className="h-4 w-4" />
-                    <span>Choose Image</span>
+                    <span>
+                      {isUploadingImage ? "Uploading..." : "Choose Image"}
+                    </span>
                   </Label>
                   <Input
                     id="profile-picture"
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    disabled
+                    onChange={handleImageUpload}
+                    disabled={isUploadingImage}
                   />
-                  <p className="text-sm text-muted-foreground text-center">
-                    Profile picture upload coming soon
+
+                  {profileData.profilePicture && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDeleteImage}
+                      disabled={isUploadingImage}
+                      className="w-full"
+                    >
+                      Remove Picture
+                    </Button>
+                  )}
+
+                  <p className="text-xs text-muted-foreground text-center">
+                    Supported formats: JPG, PNG, GIF (max 5MB)
                   </p>
                 </div>
               </div>
@@ -592,6 +757,6 @@ export default function Profile() {
           )}
         </Card>
       </div>
-    </div>
+    </Layout>
   );
 }

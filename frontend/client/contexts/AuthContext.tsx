@@ -16,6 +16,7 @@ interface User {
   company?: string;
   phone?: string;
   lastLogin?: string;
+  profilePicture?: string;
 }
 
 interface AuthContextType {

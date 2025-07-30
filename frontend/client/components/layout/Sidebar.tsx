@@ -481,52 +481,36 @@ export function Sidebar({
                 </div>
                 {user ? (
                   <>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start"
-                        >
-                          <Avatar className="h-6 w-6 mr-2">
-                            <AvatarImage src="" alt={user.firstName} />
-                            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                              {user.firstName.charAt(0)}
-                              {user.lastName.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 text-left">
-                            <div className="text-sm font-medium">
-                              {user.firstName} {user.lastName}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {getRoleLabel()}
-                            </div>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      asChild
+                    >
+                      <Link to="/profile">
+                        <Avatar className="h-6 w-6 mr-2">
+                          <AvatarImage
+                            src={
+                              user.profilePicture
+                                ? `http://localhost:5000${user.profilePicture}`
+                                : ""
+                            }
+                            alt={user.firstName}
+                          />
+                          <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                            {user.firstName.charAt(0)}
+                            {user.lastName.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 text-left">
+                          <div className="text-sm font-medium">
+                            {user.firstName} {user.lastName}
                           </div>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        className="w-56"
-                        align="end"
-                        forceMount
-                      >
-                        <DropdownMenuLabel className="font-normal">
-                          <div className="flex flex-col space-y-1">
-                            <p className="text-sm font-medium leading-none">
-                              {user.firstName} {user.lastName}
-                            </p>
-                            <p className="text-xs leading-none text-muted-foreground">
-                              {user.email}
-                            </p>
-                            <div className="flex items-center space-x-1 mt-1">
-                              {getRoleIcon()}
-                              <span className="text-xs text-muted-foreground">
-                                {getRoleLabel()}
-                              </span>
-                            </div>
+                          <div className="text-xs text-muted-foreground">
+                            {getRoleLabel()}
                           </div>
-                        </DropdownMenuLabel>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                        </div>
+                      </Link>
+                    </Button>
                     <Button
                       variant="outline"
                       className="w-full"
