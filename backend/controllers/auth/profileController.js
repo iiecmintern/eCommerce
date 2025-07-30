@@ -3,7 +3,6 @@ const { catchAsync } = require("../../utils/helpers");
 const bcrypt = require("bcryptjs");
 const fs = require("fs");
 const path = require("path");
-const { validationResult } = require("express-validator");
 
 // Get user profile
 const getProfile = catchAsync(async (req, res) => {
@@ -63,20 +62,36 @@ const updateProfile = catchAsync(async (req, res) => {
 
 // Change password
 const changePassword = catchAsync(async (req, res) => {
-  // Check for validation errors
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
+  const { currentPassword, newPassword } = req.body;
+
+  // Validate required fields
+  if (!currentPassword || !newPassword) {
     return res.status(400).json({
       success: false,
-      message: "Validation failed",
-      errors: errors.array(),
+      message: "Current password and new password are required",
     });
   }
 
-  const { currentPassword, newPassword } = req.body;
+  // Validate new password length
+  if (newPassword.length < 8) {
+    return res.status(400).json({
+      success: false,
+      message: "New password must be at least 8 characters long",
+    });
+  }
+
+  // Validate new password complexity (same as registration)
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
+  if (!passwordRegex.test(newPassword)) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Password must contain at least one lowercase letter, one uppercase letter, and one number",
+    });
+  }
 
   // Get user with password
-  const user = await User.findById(req.user.id);
+  const user = await User.findById(req.user.id).select("+password");
 
   if (!user) {
     return res.status(404).json({
@@ -95,12 +110,8 @@ const changePassword = catchAsync(async (req, res) => {
     });
   }
 
-  // Hash new password
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(newPassword, salt);
-
-  // Update password
-  user.password = hashedPassword;
+  // Update password (let the model's pre-save middleware handle hashing)
+  user.password = newPassword;
   await user.save();
 
   res.json({

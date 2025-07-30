@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const { protect } = require("../../middleware/auth/auth");
 const { uploadAvatar, handleUploadError } = require("../../middleware/upload");
-const { changePasswordValidation } = require("../../utils/validation");
 const {
   getProfile,
   updateProfile,
@@ -21,7 +20,7 @@ router.get("/", getProfile);
 router.put("/", updateProfile);
 
 // Change password
-router.put("/password", changePasswordValidation, changePassword);
+router.put("/password", changePassword);
 
 // Upload profile picture
 router.post(
