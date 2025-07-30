@@ -61,16 +61,13 @@ import {
   Mouse,
   Speaker,
   Lamp,
-  Sofa,
   Bed,
-  Chair,
   Table,
-  Mirror,
-  Plant,
   Clock,
   Gift,
   Tag,
   ShoppingCart,
+  Square,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -220,15 +217,15 @@ export function Sidebar({
     if (categoryLower.includes("lamp") || categoryLower.includes("light"))
       return <Lamp className="h-4 w-4" />;
     if (categoryLower.includes("sofa") || categoryLower.includes("couch"))
-      return <Sofa className="h-4 w-4" />;
+      return <Square className="h-4 w-4" />;
     if (categoryLower.includes("bed") || categoryLower.includes("mattress"))
       return <Bed className="h-4 w-4" />;
     if (categoryLower.includes("chair") || categoryLower.includes("stool"))
-      return <Chair className="h-4 w-4" />;
+      return <Square className="h-4 w-4" />;
     if (categoryLower.includes("table") || categoryLower.includes("desk"))
       return <Table className="h-4 w-4" />;
     if (categoryLower.includes("mirror") || categoryLower.includes("glass"))
-      return <Mirror className="h-4 w-4" />;
+      return <Square className="h-4 w-4" />;
     if (categoryLower.includes("clock") || categoryLower.includes("time"))
       return <Clock className="h-4 w-4" />;
     if (categoryLower.includes("gift") || categoryLower.includes("present"))
