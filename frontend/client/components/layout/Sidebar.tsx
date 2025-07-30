@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,38 @@ import {
   Shield,
   BookOpen,
   LogOut,
+  Package,
+  Heart,
+  Car,
+  Gamepad2,
+  Palette,
+  Utensils,
+  Baby,
+  Flower2,
+  Dumbbell,
+  Camera,
+  Music,
+  Monitor,
+  Watch,
+  Headphones,
+  Laptop,
+  Tablet,
+  Tv,
+  Printer,
+  Keyboard,
+  Mouse,
+  Speaker,
+  Lamp,
+  Sofa,
+  Bed,
+  Chair,
+  Table,
+  Mirror,
+  Plant,
+  Clock,
+  Gift,
+  Tag,
+  ShoppingCart,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -62,6 +94,149 @@ export function Sidebar({
     "Solutions",
     "Account",
   ]);
+  const [dynamicCategories, setDynamicCategories] = useState<
+    Array<{
+      name: string;
+      count: number;
+      icon: React.ReactNode;
+    }>
+  >([]);
+
+  // Load dynamic categories from all vendor products
+  useEffect(() => {
+    const loadCategories = () => {
+      try {
+        // Get all vendor products from localStorage
+        const allProducts: any[] = [];
+
+        // In a real app, you would fetch from API
+        // For now, we'll use localStorage data
+        const savedProducts = localStorage.getItem("vendor_products");
+        if (savedProducts) {
+          const parsedProducts = JSON.parse(savedProducts);
+          allProducts.push(...parsedProducts);
+        }
+
+        // Count products by category
+        const categoryCounts: { [key: string]: number } = {};
+        allProducts.forEach((product) => {
+          if (product.category && product.isActive) {
+            categoryCounts[product.category] =
+              (categoryCounts[product.category] || 0) + 1;
+          }
+        });
+
+        // Create category items with icons
+        const categories = Object.entries(categoryCounts).map(
+          ([category, count]) => ({
+            name: category,
+            count,
+            icon: getCategoryIcon(category),
+          }),
+        );
+
+        // Sort by count (most popular first)
+        categories.sort((a, b) => b.count - a.count);
+
+        setDynamicCategories(categories);
+      } catch (error) {
+        console.error("Error loading categories:", error);
+      }
+    };
+
+    loadCategories();
+
+    // Listen for localStorage changes to update categories in real-time
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "vendor_products") {
+        loadCategories();
+      }
+    };
+
+    // Listen for custom events when products are updated
+    const handleProductUpdate = () => {
+      loadCategories();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("productUpdated", handleProductUpdate);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("productUpdated", handleProductUpdate);
+    };
+  }, []);
+
+  // Function to get appropriate icon for each category
+  const getCategoryIcon = (category: string): React.ReactNode => {
+    const categoryLower = category.toLowerCase();
+
+    if (categoryLower.includes("electronics") || categoryLower.includes("tech"))
+      return <Monitor className="h-4 w-4" />;
+    if (categoryLower.includes("fashion") || categoryLower.includes("clothing"))
+      return <Crown className="h-4 w-4" />;
+    if (categoryLower.includes("home") || categoryLower.includes("kitchen"))
+      return <Building className="h-4 w-4" />;
+    if (categoryLower.includes("book")) return <BookOpen className="h-4 w-4" />;
+    if (categoryLower.includes("sport") || categoryLower.includes("fitness"))
+      return <Dumbbell className="h-4 w-4" />;
+    if (categoryLower.includes("beauty") || categoryLower.includes("health"))
+      return <Heart className="h-4 w-4" />;
+    if (categoryLower.includes("toy") || categoryLower.includes("game"))
+      return <Gamepad2 className="h-4 w-4" />;
+    if (categoryLower.includes("food") || categoryLower.includes("beverage"))
+      return <Utensils className="h-4 w-4" />;
+    if (categoryLower.includes("art") || categoryLower.includes("craft"))
+      return <Palette className="h-4 w-4" />;
+    if (categoryLower.includes("automotive") || categoryLower.includes("car"))
+      return <Car className="h-4 w-4" />;
+    if (categoryLower.includes("baby") || categoryLower.includes("kids"))
+      return <Baby className="h-4 w-4" />;
+    if (categoryLower.includes("garden") || categoryLower.includes("plant"))
+      return <Flower2 className="h-4 w-4" />;
+    if (categoryLower.includes("camera") || categoryLower.includes("photo"))
+      return <Camera className="h-4 w-4" />;
+    if (categoryLower.includes("music") || categoryLower.includes("audio"))
+      return <Music className="h-4 w-4" />;
+    if (categoryLower.includes("watch") || categoryLower.includes("jewelry"))
+      return <Watch className="h-4 w-4" />;
+    if (
+      categoryLower.includes("headphone") ||
+      categoryLower.includes("earphone")
+    )
+      return <Headphones className="h-4 w-4" />;
+    if (categoryLower.includes("laptop") || categoryLower.includes("computer"))
+      return <Laptop className="h-4 w-4" />;
+    if (categoryLower.includes("tablet") || categoryLower.includes("ipad"))
+      return <Tablet className="h-4 w-4" />;
+    if (categoryLower.includes("tv") || categoryLower.includes("television"))
+      return <Tv className="h-4 w-4" />;
+    if (categoryLower.includes("printer") || categoryLower.includes("scanner"))
+      return <Printer className="h-4 w-4" />;
+    if (categoryLower.includes("keyboard") || categoryLower.includes("mouse"))
+      return <Keyboard className="h-4 w-4" />;
+    if (categoryLower.includes("speaker") || categoryLower.includes("sound"))
+      return <Speaker className="h-4 w-4" />;
+    if (categoryLower.includes("lamp") || categoryLower.includes("light"))
+      return <Lamp className="h-4 w-4" />;
+    if (categoryLower.includes("sofa") || categoryLower.includes("couch"))
+      return <Sofa className="h-4 w-4" />;
+    if (categoryLower.includes("bed") || categoryLower.includes("mattress"))
+      return <Bed className="h-4 w-4" />;
+    if (categoryLower.includes("chair") || categoryLower.includes("stool"))
+      return <Chair className="h-4 w-4" />;
+    if (categoryLower.includes("table") || categoryLower.includes("desk"))
+      return <Table className="h-4 w-4" />;
+    if (categoryLower.includes("mirror") || categoryLower.includes("glass"))
+      return <Mirror className="h-4 w-4" />;
+    if (categoryLower.includes("clock") || categoryLower.includes("time"))
+      return <Clock className="h-4 w-4" />;
+    if (categoryLower.includes("gift") || categoryLower.includes("present"))
+      return <Gift className="h-4 w-4" />;
+
+    // Default icon for unknown categories
+    return <Package className="h-4 w-4" />;
+  };
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) =>
@@ -76,26 +251,22 @@ export function Sidebar({
       title: "Shop",
       items: [
         { href: "/", label: "Home", icon: <Home className="h-4 w-4" /> },
-        {
-          href: "/category/electronics",
-          label: "Electronics",
-          icon: <Star className="h-4 w-4" />,
-        },
-        {
-          href: "/category/fashion",
-          label: "Fashion",
-          icon: <Crown className="h-4 w-4" />,
-        },
-        {
-          href: "/category/home",
-          label: "Home & Kitchen",
-          icon: <Building className="h-4 w-4" />,
-        },
-        {
-          href: "/category/books",
-          label: "Books",
-          icon: <BookOpen className="h-4 w-4" />,
-        },
+        // Dynamic categories from vendor products
+        ...dynamicCategories.map((category) => ({
+          href: `/category/${category.name.toLowerCase().replace(/\s+/g, "-")}`,
+          label: `${category.name} (${category.count})`,
+          icon: category.icon,
+        })),
+        // Show message if no categories found
+        ...(dynamicCategories.length === 0
+          ? [
+              {
+                href: "/vendor/products",
+                label: "No products yet",
+                icon: <Package className="h-4 w-4" />,
+              },
+            ]
+          : []),
       ],
     },
     {

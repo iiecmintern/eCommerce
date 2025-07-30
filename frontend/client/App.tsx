@@ -18,6 +18,7 @@ import GetStarted from "./pages/GetStarted";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import VendorDashboard from "./pages/VendorDashboard";
+import ProductManagement from "./pages/ProductManagement";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import SignUp from "./pages/SignUp";
 import SignIn from "./pages/SignIn";
@@ -133,6 +134,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={["vendor", "admin"]}>
             <VendorDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/vendor/products"
+        element={
+          <ProtectedRoute allowedRoles={["vendor", "admin"]}>
+            <ProductManagement />
           </ProtectedRoute>
         }
       />
