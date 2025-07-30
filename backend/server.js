@@ -70,10 +70,16 @@ const connectDB = async () => {
 // Import routes
 const authRoutes = require("./routes/auth/authRoutes");
 const profileRoutes = require("./routes/auth/profileRoutes");
+const productRoutes = require("./routes/api/productRoutes");
+const orderRoutes = require("./routes/api/orderRoutes");
+const storeRoutes = require("./routes/api/storeRoutes");
 
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/stores", storeRoutes);
 
 // Test MongoDB connection endpoint
 app.get("/test-db", async (req, res) => {
