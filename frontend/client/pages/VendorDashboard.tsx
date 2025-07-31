@@ -54,7 +54,9 @@ import {
   Zap,
   Target,
   TrendingDown,
+  Loader2,
 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function VendorDashboard() {
   const navigate = useNavigate();
@@ -62,7 +64,8 @@ export default function VendorDashboard() {
   const { user } = useAuth();
 
   // State for real-time data
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -75,69 +78,82 @@ export default function VendorDashboard() {
     conversionRate: 0,
     averageOrderValue: 0,
     returningCustomers: 0,
+    activeProducts: 0,
+    featuredProducts: 0,
+    lowStockProducts: 0,
   });
 
   // Load data from localStorage on component mount
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
+  const loadDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
 
-  const loadDashboardData = () => {
-    // Load products from localStorage
-    const savedProducts = localStorage.getItem("vendor_products");
-    if (savedProducts) {
-      const parsedProducts = JSON.parse(savedProducts);
-      setProducts(parsedProducts);
+      // Load products from localStorage
+      const savedProducts = localStorage.getItem("vendor_products");
+      if (savedProducts) {
+        const parsedProducts = JSON.parse(savedProducts);
+        setProducts(parsedProducts);
 
-      // Calculate stats from products
-      const totalProducts = parsedProducts.length;
-      const activeProducts = parsedProducts.filter(
-        (p: any) => p.isActive,
-      ).length;
-      const featuredProducts = parsedProducts.filter(
-        (p: any) => p.isFeatured,
-      ).length;
-      const lowStockProducts = parsedProducts.filter(
-        (p: any) => p.stockQuantity < 10,
-      ).length;
+        // Calculate stats from products
+        const totalProducts = parsedProducts.length;
+        const activeProducts = parsedProducts.filter(
+          (p: any) => p.isActive,
+        ).length;
+        const featuredProducts = parsedProducts.filter(
+          (p: any) => p.isFeatured,
+        ).length;
+        const lowStockProducts = parsedProducts.filter(
+          (p: any) => p.stockQuantity < 10,
+        ).length;
 
-      setStoreStats((prev) => ({
-        ...prev,
-        totalProducts,
-        activeProducts,
-        featuredProducts,
-        lowStockProducts,
-      }));
+        setStoreStats((prev) => ({
+          ...prev,
+          totalProducts,
+          activeProducts,
+          featuredProducts,
+          lowStockProducts,
+        }));
+      }
+
+      // TODO: Replace with real API calls
+      // Load orders from API
+      // const orders = await fetchOrders();
+      // setOrders(orders);
+
+      // Load reviews from API
+      // const reviews = await fetchReviews();
+      // setReviews(reviews);
+
+      // Calculate stats from real data
+      // const totalRevenue = orders.reduce((sum, order) => sum + order.amount, 0);
+      // const averageRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
+
+      // setStoreStats((prev) => ({
+      //   ...prev,
+      //   totalRevenue,
+      //   totalOrders: orders.length,
+      //   averageRating: averageRating || 0,
+      //   monthlyGrowth: calculateMonthlyGrowth(),
+      //   conversionRate: calculateConversionRate(),
+      //   averageOrderValue: totalRevenue / orders.length || 0,
+      //   returningCustomers: calculateReturningCustomers(),
+      // }));
+    } catch (error) {
+      console.error("Error loading dashboard data:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load dashboard data",
+      );
+    } finally {
+      setIsLoading(false);
     }
-
-    // TODO: Replace with real API calls
-    // Load orders from API
-    // const orders = await fetchOrders();
-    // setOrders(orders);
-
-    // Load reviews from API
-    // const reviews = await fetchReviews();
-    // setReviews(reviews);
-
-    // Calculate stats from real data
-    // const totalRevenue = orders.reduce((sum, order) => sum + order.amount, 0);
-    // const averageRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
-
-    // setStoreStats((prev) => ({
-    //   ...prev,
-    //   totalRevenue,
-    //   totalOrders: orders.length,
-    //   averageRating: averageRating || 0,
-    //   monthlyGrowth: calculateMonthlyGrowth(),
-    //   conversionRate: calculateConversionRate(),
-    //   averageOrderValue: totalRevenue / orders.length || 0,
-    //   returningCustomers: calculateReturningCustomers(),
-    // }));
   };
 
   const handleSyncOrders = async () => {
-    setIsLoading(true);
     try {
+      setIsLoading(true);
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 2000));
       toast({
@@ -145,6 +161,7 @@ export default function VendorDashboard() {
         description: "All orders have been updated from the marketplace.",
       });
     } catch (error) {
+      console.error("Error syncing orders:", error);
       toast({
         title: "Sync failed",
         description: "Failed to sync orders. Please try again.",
@@ -255,32 +272,23 @@ export default function VendorDashboard() {
     {
       id: 1,
       name: "Wireless Charging Pad",
-      sales: 145,
-      revenue: "$2,899",
-      stock: 23,
-      rating: 4.9,
-      image:
-        "https://images.pexels.com/photos/6214448/pexels-photo-6214448.jpeg",
+      sales: 847,
+      revenue: 42350,
+      growth: 12.5,
     },
     {
       id: 2,
       name: "Bluetooth Earbuds",
-      sales: 132,
-      revenue: "$3,168",
-      stock: 45,
-      rating: 4.7,
-      image:
-        "https://images.pexels.com/photos/6214448/pexels-photo-6214448.jpeg",
+      sales: 623,
+      revenue: 31150,
+      growth: 8.2,
     },
     {
       id: 3,
       name: "Phone Stand Holder",
-      sales: 98,
-      revenue: "$1,470",
-      stock: 12,
-      rating: 4.6,
-      image:
-        "https://images.pexels.com/photos/6214448/pexels-photo-6214448.jpeg",
+      sales: 456,
+      revenue: 9120,
+      growth: 15.7,
     },
   ];
 
@@ -317,6 +325,52 @@ export default function VendorDashboard() {
     averageOrderValue: 67.84,
     returningCustomers: 28,
   };
+
+  // Retry loading data
+  const handleRetry = () => {
+    setError(null);
+    loadDashboardData();
+  };
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  // Handle loading state
+  if (isLoading && !error) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-lg text-muted-foreground">
+              Loading dashboard...
+            </p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Handle error state
+  if (error) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center p-6">
+          <div className="max-w-md w-full text-center">
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            <Button onClick={handleRetry} className="w-full">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

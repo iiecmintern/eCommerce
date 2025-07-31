@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { CartProvider } from "@/contexts/CartContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Features from "./pages/Features";
@@ -30,6 +31,7 @@ import SearchResults from "./pages/SearchResults";
 import CategoryPage from "./pages/CategoryPage";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
 import B2BCommerce from "./pages/B2BCommerce";
 import Subscriptions from "./pages/Subscriptions";
 
@@ -103,6 +105,7 @@ const AppRoutes = () => {
       <Route path="/products" element={<CategoryPage />} />
       <Route path="/product/:id" element={<ProductDetail />} />
       <Route path="/cart" element={<Cart />} />
+      <Route path="/checkout" element={<Checkout />} />
       <Route
         path="/profile"
         element={
@@ -354,15 +357,20 @@ const AppRoutes = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <ThemeProvider defaultTheme="system" storageKey="commerceforge-ui-theme">
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </TooltipProvider>
-      </ThemeProvider>
+      <CartProvider>
+        <ThemeProvider
+          defaultTheme="system"
+          storageKey="commerceforge-ui-theme"
+        >
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </TooltipProvider>
+        </ThemeProvider>
+      </CartProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

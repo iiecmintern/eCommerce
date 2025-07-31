@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
 import {
   ShoppingCart,
   Search,
@@ -26,6 +27,7 @@ import { cn } from "@/lib/utils";
 
 export function Header() {
   const { user, logout } = useAuth();
+  const { totalItems } = useCart();
 
   const handleLogout = () => {
     logout();
@@ -103,6 +105,19 @@ export function Header() {
           <Button variant="ghost" size="sm">
             <Search className="h-4 w-4" />
             <span className="sr-only">Search</span>
+          </Button>
+
+          {/* Cart Icon */}
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/cart" className="relative">
+              <ShoppingCart className="h-4 w-4" />
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium">
+                  {totalItems > 99 ? "99+" : totalItems}
+                </span>
+              )}
+              <span className="sr-only">Cart</span>
+            </Link>
           </Button>
 
           {user ? (

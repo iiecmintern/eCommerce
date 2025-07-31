@@ -23,6 +23,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
+  error: string | null;
   login: (
     email: string,
     password: string,
@@ -32,6 +33,7 @@ interface AuthContextType {
   ) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
+  clearError: () => void;
 }
 
 interface RegisterData {
@@ -64,6 +66,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // API base URL
   const API_BASE_URL = "http://localhost:5000/api";
@@ -94,8 +97,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       } catch (error) {
         console.error("Error loading user from localStorage:", error);
+        // Clear corrupted data
         localStorage.removeItem("authToken");
         localStorage.removeItem("user");
+        setError("Failed to load user data. Please log in again.");
       } finally {
         setIsLoading(false);
       }
@@ -106,24 +111,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Save user and token to localStorage
   const saveAuthData = (userData: User, authToken: string) => {
-    localStorage.setItem("authToken", authToken);
-    localStorage.setItem("user", JSON.stringify(userData));
-    setUser(userData);
-    setToken(authToken);
+    try {
+      localStorage.setItem("authToken", authToken);
+      localStorage.setItem("user", JSON.stringify(userData));
+      setUser(userData);
+      setToken(authToken);
+      setError(null);
+    } catch (error) {
+      console.error("Error saving auth data:", error);
+      setError("Failed to save authentication data.");
+    }
   };
 
   // Clear auth data
   const clearAuthData = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("user");
-    setUser(null);
-    setToken(null);
+    try {
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+      setUser(null);
+      setToken(null);
+      setError(null);
+    } catch (error) {
+      console.error("Error clearing auth data:", error);
+      // Force clear state even if localStorage fails
+      setUser(null);
+      setToken(null);
+    }
+  };
+
+  // Clear error
+  const clearError = () => {
+    setError(null);
   };
 
   // Login function
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
+      setError(null);
 
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
@@ -139,11 +164,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         saveAuthData(data.data.user, data.data.token);
         return { success: true, message: data.message };
       } else {
+        setError(data.message || "Login failed");
         return { success: false, message: data.message };
       }
     } catch (error) {
       console.error("Login error:", error);
-      return { success: false, message: "Network error. Please try again." };
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Network error. Please try again.";
+      setError(errorMessage);
+      return { success: false, message: errorMessage };
     } finally {
       setIsLoading(false);
     }
@@ -153,6 +184,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (userData: RegisterData) => {
     try {
       setIsLoading(true);
+      setError(null);
 
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",
@@ -168,11 +200,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         saveAuthData(data.data.user, data.data.token);
         return { success: true, message: data.message };
       } else {
+        setError(data.message || "Registration failed");
         return { success: false, message: data.message };
       }
     } catch (error) {
       console.error("Registration error:", error);
-      return { success: false, message: "Network error. Please try again." };
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Network error. Please try again.";
+      setError(errorMessage);
+      return { success: false, message: errorMessage };
     } finally {
       setIsLoading(false);
     }
@@ -180,15 +218,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Logout function
   const logout = () => {
-    clearAuthData();
+    try {
+      clearAuthData();
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Force logout even if there's an error
+      setUser(null);
+      setToken(null);
+    }
   };
 
   // Update user function
   const updateUser = (userData: Partial<User>) => {
-    if (user) {
-      const updatedUser = { ...user, ...userData };
-      setUser(updatedUser);
-      localStorage.setItem("user", JSON.stringify(updatedUser));
+    try {
+      if (user) {
+        const updatedUser = { ...user, ...userData };
+        setUser(updatedUser);
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+      }
+    } catch (error) {
+      console.error("Error updating user:", error);
+      setError("Failed to update user data.");
     }
   };
 
@@ -196,10 +246,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     token,
     isLoading,
+    error,
     login,
     register,
     logout,
     updateUser,
+    clearError,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

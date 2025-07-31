@@ -33,34 +33,79 @@ const register = async (req, res) => {
       agreeToMarketing,
     } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.emailExists(email);
-    if (existingUser) {
+    // Validate required fields
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: "User with this email already exists",
+        message: "Email and password are required",
+      });
+    }
+
+    // Check if user already exists
+    try {
+      const existingUser = await User.emailExists(email);
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: "User with this email already exists",
+        });
+      }
+    } catch (error) {
+      console.error("Error checking existing user:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error checking user existence",
       });
     }
 
     // Create new user
-    const user = await User.create({
-      firstName,
-      lastName,
-      email,
-      phone,
-      company,
-      password,
-      role: role || "customer",
-      agreeToTerms,
-      agreeToMarketing,
-    });
+    let user;
+    try {
+      user = await User.create({
+        firstName,
+        lastName,
+        email,
+        phone,
+        company,
+        password,
+        role: role || "customer",
+        agreeToTerms,
+        agreeToMarketing,
+      });
+    } catch (error) {
+      console.error("Error creating user:", error);
+      if (error.code === 11000) {
+        return res.status(400).json({
+          success: false,
+          message: "User with this email already exists",
+        });
+      }
+      return res.status(500).json({
+        success: false,
+        message: "Error creating user account",
+      });
+    }
 
     // Generate JWT token
-    const token = generateToken(user._id, user.role);
+    let token;
+    try {
+      token = generateToken(user._id, user.role);
+    } catch (error) {
+      console.error("Error generating token:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error generating authentication token",
+      });
+    }
 
     // Update last login
-    user.lastLogin = new Date();
-    await user.save();
+    try {
+      user.lastLogin = new Date();
+      await user.save();
+    } catch (error) {
+      console.error("Error updating last login:", error);
+      // Don't fail the registration for this error
+    }
 
     res.status(201).json({
       success: true,
@@ -84,8 +129,8 @@ const register = async (req, res) => {
     console.error("Registration error:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error",
-      error: error.message,
+      message: "Internal server error during registration",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -101,36 +146,68 @@ const login = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Please provide email and password",
+        message: "Email and password are required",
       });
     }
 
-    // Check if user exists && password is correct
-    const user = await User.findOne({ email: email.toLowerCase() }).select(
-      "+password"
-    );
-
-    if (!user || !(await user.correctPassword(password, user.password))) {
-      return res.status(401).json({
+    // Check if user exists and password is correct
+    let user;
+    try {
+      user = await User.findOne({ email }).select("+password");
+    } catch (error) {
+      console.error("Error finding user:", error);
+      return res.status(500).json({
         success: false,
-        message: "Incorrect email or password",
+        message: "Error finding user account",
       });
     }
 
-    // Check if user is active
-    if (!user.isActive) {
+    if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Your account has been deactivated. Please contact support.",
+        message: "Invalid email or password",
+      });
+    }
+
+    // Check if password is correct
+    let isPasswordCorrect;
+    try {
+      isPasswordCorrect = await user.comparePassword(password);
+    } catch (error) {
+      console.error("Error comparing password:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error verifying password",
+      });
+    }
+
+    if (!isPasswordCorrect) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
       });
     }
 
     // Generate JWT token
-    const token = generateToken(user._id, user.role);
+    let token;
+    try {
+      token = generateToken(user._id, user.role);
+    } catch (error) {
+      console.error("Error generating token:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error generating authentication token",
+      });
+    }
 
     // Update last login
-    user.lastLogin = new Date();
-    await user.save();
+    try {
+      user.lastLogin = new Date();
+      await user.save();
+    } catch (error) {
+      console.error("Error updating last login:", error);
+      // Don't fail the login for this error
+    }
 
     res.status(200).json({
       success: true,
@@ -154,8 +231,8 @@ const login = async (req, res) => {
     console.error("Login error:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error",
-      error: error.message,
+      message: "Internal server error during login",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -165,7 +242,23 @@ const login = async (req, res) => {
 // @access  Private
 const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    let user;
+    try {
+      user = await User.findById(req.user.id);
+    } catch (error) {
+      console.error("Error finding user:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error retrieving user data",
+      });
+    }
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -179,7 +272,6 @@ const getMe = async (req, res) => {
           isEmailVerified: user.isEmailVerified,
           company: user.company,
           phone: user.phone,
-          lastLogin: user.lastLogin,
           profilePicture: user.profilePicture,
         },
       },
@@ -189,7 +281,7 @@ const getMe = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Internal server error",
-      error: error.message,
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -199,8 +291,8 @@ const getMe = async (req, res) => {
 // @access  Private
 const logout = async (req, res) => {
   try {
-    // In a stateless JWT system, logout is handled client-side
-    // by removing the token. However, we can log the logout event
+    // In a real application, you might want to blacklist the token
+    // For now, we'll just return a success response
     res.status(200).json({
       success: true,
       message: "Logged out successfully",
@@ -209,8 +301,8 @@ const logout = async (req, res) => {
     console.error("Logout error:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error",
-      error: error.message,
+      message: "Internal server error during logout",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -222,35 +314,72 @@ const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      return res.status(404).json({
+    if (!email) {
+      return res.status(400).json({
         success: false,
-        message: "There is no user with this email address",
+        message: "Email is required",
       });
     }
 
-    // Generate random reset token
-    const resetToken = generateRandomToken();
-    user.passwordResetToken = hashToken(resetToken);
-    user.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
-    await user.save();
+    let user;
+    try {
+      user = await User.findOne({ email });
+    } catch (error) {
+      console.error("Error finding user for password reset:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error processing password reset request",
+      });
+    }
+
+    if (!user) {
+      // Don't reveal if user exists or not for security
+      return res.status(200).json({
+        success: true,
+        message:
+          "If an account with that email exists, a password reset link has been sent",
+      });
+    }
+
+    // Generate reset token
+    let resetToken;
+    try {
+      resetToken = generateRandomToken();
+    } catch (error) {
+      console.error("Error generating reset token:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error generating password reset token",
+      });
+    }
+
+    // Hash token and save to user
+    try {
+      user.passwordResetToken = hashToken(resetToken);
+      user.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+      await user.save();
+    } catch (error) {
+      console.error("Error saving reset token:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error saving password reset token",
+      });
+    }
 
     // TODO: Send email with reset token
-    // For now, we'll return the token in response (remove this in production)
+    console.log("Password reset token:", resetToken);
+
     res.status(200).json({
       success: true,
-      message: "Password reset token sent to email",
-      data: {
-        resetToken, // Remove this in production
-      },
+      message:
+        "If an account with that email exists, a password reset link has been sent",
     });
   } catch (error) {
     console.error("Forgot password error:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error",
-      error: error.message,
+      message: "Internal server error during password reset",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -262,49 +391,71 @@ const resetPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
 
-    // Get user based on the token
-    const hashedToken = hashToken(token);
-    const user = await User.findOne({
-      passwordResetToken: hashedToken,
-      passwordResetExpires: { $gt: Date.now() },
-    });
+    if (!token || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Token and new password are required",
+      });
+    }
+
+    // Hash the token to compare with stored hash
+    let hashedToken;
+    try {
+      hashedToken = hashToken(token);
+    } catch (error) {
+      console.error("Error hashing reset token:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error processing reset token",
+      });
+    }
+
+    // Find user with valid reset token
+    let user;
+    try {
+      user = await User.findOne({
+        passwordResetToken: hashedToken,
+        passwordResetExpires: { $gt: Date.now() },
+      });
+    } catch (error) {
+      console.error("Error finding user with reset token:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error processing password reset",
+      });
+    }
 
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: "Token is invalid or has expired",
+        message: "Invalid or expired reset token",
       });
     }
 
-    // Set new password
-    user.password = password;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
-    await user.save();
-
-    // Generate new JWT token
-    const jwtToken = generateToken(user._id, user.role);
+    // Update password and clear reset token
+    try {
+      user.password = password;
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save();
+    } catch (error) {
+      console.error("Error updating password:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error updating password",
+      });
+    }
 
     res.status(200).json({
       success: true,
       message: "Password reset successful",
-      data: {
-        user: {
-          id: user._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          role: user.role,
-        },
-        token: jwtToken,
-      },
     });
   } catch (error) {
     console.error("Reset password error:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error",
-      error: error.message,
+      message: "Internal server error during password reset",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };

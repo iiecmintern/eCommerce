@@ -1,102 +1,153 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Minus, 
-  Plus, 
-  Trash2, 
-  Heart,
-  ShoppingBag,
-  ArrowRight,
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import { useCart } from "@/contexts/CartContext";
+import {
+  ShoppingCart,
+  Trash2,
+  Minus,
+  Plus,
+  ArrowLeft,
+  CreditCard,
   Truck,
-  Shield,
   Tag,
-  MapPin
+  X,
+  Loader2,
 } from "lucide-react";
 
 export default function Cart() {
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: "Samsung Galaxy S24 Ultra",
-      price: 124999,
-      originalPrice: 149999,
-      quantity: 1,
-      image: "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
-      variant: "256GB, Titanium Black",
-      inStock: true,
-      seller: "Samsung Official Store"
-    },
-    {
-      id: 2,
-      name: "Apple MacBook Air M2",
-      price: 99900,
-      originalPrice: 119900,
-      quantity: 1,
-      image: "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
-      variant: "13-inch, 8GB RAM, 256GB SSD",
-      inStock: true,
-      seller: "Apple Store"
-    },
-    {
-      id: 3,
-      name: "Sony WH-1000XM5 Headphones",
-      price: 24990,
-      originalPrice: 29990,
-      quantity: 2,
-      image: "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
-      variant: "Black",
-      inStock: true,
-      seller: "Sony Official"
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const {
+    items,
+    totalItems,
+    subtotal,
+    totalDiscount,
+    total,
+    removeFromCart,
+    updateQuantity,
+    clearCart,
+    applyCoupon,
+    removeCoupon,
+    couponCode,
+    couponDiscount,
+  } = useCart();
+
+  const [couponInput, setCouponInput] = useState("");
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) {
+      toast({
+        title: "Coupon code required",
+        description: "Please enter a coupon code",
+        variant: "destructive",
+      });
+      return;
     }
-  ]);
 
-  const updateQuantity = (id: number, newQuantity: number) => {
-    if (newQuantity < 1) return;
-    setCartItems(items => 
-      items.map(item => 
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      )
-    );
+    setIsApplyingCoupon(true);
+    try {
+      const result = await applyCoupon(couponInput.trim().toUpperCase());
+      toast({
+        title: result.success ? "Coupon Applied!" : "Invalid Coupon",
+        description: result.message,
+        variant: result.success ? "default" : "destructive",
+      });
+
+      if (result.success) {
+        setCouponInput("");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to apply coupon. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsApplyingCoupon(false);
+    }
   };
 
-  const removeItem = (id: number) => {
-    setCartItems(items => items.filter(item => item.id !== id));
+  const handleRemoveCoupon = () => {
+    removeCoupon();
+    toast({
+      title: "Coupon Removed",
+      description: "Coupon has been removed from your cart",
+    });
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const savings = cartItems.reduce((sum, item) => sum + ((item.originalPrice - item.price) * item.quantity), 0);
-  const deliveryFee = subtotal > 50000 ? 0 : 199;
-  const total = subtotal + deliveryFee;
+  const handleCheckout = async () => {
+    if (items.length === 0) {
+      toast({
+        title: "Empty Cart",
+        description: "Please add items to your cart before checkout",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0
-    }).format(price);
+    setIsCheckingOut(true);
+    try {
+      // TODO: Implement actual checkout flow
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      toast({
+        title: "Redirecting to Checkout",
+        description: "You will be redirected to the checkout page",
+      });
+
+      // Navigate to checkout page
+      navigate("/checkout");
+    } catch (error) {
+      toast({
+        title: "Checkout Error",
+        description: "Failed to proceed to checkout. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCheckingOut(false);
+    }
   };
 
-  if (cartItems.length === 0) {
+  const handleClearCart = () => {
+    clearCart();
+    toast({
+      title: "Cart Cleared",
+      description: "All items have been removed from your cart",
+    });
+  };
+
+  if (items.length === 0) {
     return (
       <Layout>
-        <div className="container py-12">
-          <Card className="max-w-md mx-auto text-center">
-            <CardContent className="p-12">
-              <ShoppingBag className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <h2 className="text-2xl font-bold mb-2">Your cart is empty</h2>
-              <p className="text-muted-foreground mb-6">
-                Add some products to get started
-              </p>
-              <Button asChild>
-                <Link to="/">Continue Shopping</Link>
+        <div className="min-h-screen flex items-center justify-center p-6">
+          <div className="text-center max-w-md">
+            <ShoppingCart className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Your Cart is Empty</h2>
+            <p className="text-muted-foreground mb-6">
+              Looks like you haven't added any items to your cart yet.
+            </p>
+            <div className="space-y-3">
+              <Button onClick={() => navigate("/")} className="w-full">
+                Continue Shopping
               </Button>
-            </CardContent>
-          </Card>
+              <Button
+                variant="outline"
+                onClick={() => navigate("/search")}
+                className="w-full"
+              >
+                Browse Products
+              </Button>
+            </div>
+          </div>
         </div>
       </Layout>
     );
@@ -104,205 +155,246 @@ export default function Cart() {
 
   return (
     <Layout>
-      <div className="container py-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">Shopping Cart</h1>
-          <p className="text-muted-foreground">{cartItems.length} items in your cart</p>
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              onClick={() => navigate(-1)}
+              className="flex items-center space-x-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Continue Shopping</span>
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">Shopping Cart</h1>
+              <p className="text-muted-foreground">
+                {totalItems} item{totalItems !== 1 ? "s" : ""} in your cart
+              </p>
+            </div>
+          </div>
+          <Button variant="outline" onClick={handleClearCart}>
+            <Trash2 className="h-4 w-4 mr-2" />
+            Clear Cart
+          </Button>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
-            {cartItems.map((item) => (
-              <Card key={item.id}>
+            {items.map((item) => (
+              <Card key={item.id} className="overflow-hidden">
                 <CardContent className="p-6">
-                  <div className="flex gap-4">
-                    <img 
-                      src={item.image} 
-                      alt={item.name}
-                      className="w-24 h-24 object-cover rounded-lg"
-                    />
-                    
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h3 className="font-semibold text-lg">{item.name}</h3>
-                          <p className="text-sm text-muted-foreground">{item.variant}</p>
-                          <p className="text-sm text-muted-foreground">Sold by: {item.seller}</p>
-                        </div>
-                        
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Heart className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => removeItem(item.id)}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-xl font-bold">{formatPrice(item.price)}</span>
-                          <span className="text-sm text-muted-foreground line-through">
-                            {formatPrice(item.originalPrice)}
-                          </span>
-                          <Badge variant="destructive" className="text-xs">
-                            {Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)}% off
-                          </Badge>
-                        </div>
-                        
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center border rounded-lg">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            >
-                              <Minus className="h-4 w-4" />
-                            </Button>
-                            <span className="px-4 py-2 min-w-[3rem] text-center">{item.quantity}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-4 mt-3">
-                        <Badge variant="outline" className="text-green-600">
-                          <Truck className="h-3 w-3 mr-1" />
-                          Free Delivery
-                        </Badge>
-                        <Badge variant="outline" className="text-blue-600">
-                          <Shield className="h-3 w-3 mr-1" />
-                          7-day Returns
-                        </Badge>
+                  <div className="flex items-center space-x-4">
+                    {/* Product Image */}
+                    <div className="relative w-20 h-20 flex-shrink-0">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-full h-full object-cover rounded-lg"
+                        onError={(e) => {
+                          console.error("Error loading product image:", e);
+                          e.currentTarget.src =
+                            "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg";
+                        }}
+                      />
+                    </div>
+
+                    {/* Product Details */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-lg truncate">
+                        {item.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Sold by {item.vendor} • {item.store}
+                      </p>
+                      <div className="flex items-center space-x-2 mt-2">
+                        <span className="font-semibold">
+                          ₹{item.price.toLocaleString()}
+                        </span>
+                        {item.originalPrice &&
+                          item.originalPrice > item.price && (
+                            <span className="text-sm text-muted-foreground line-through">
+                              ₹{item.originalPrice.toLocaleString()}
+                            </span>
+                          )}
                       </div>
                     </div>
+
+                    {/* Quantity Controls */}
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          updateQuantity(item.id, item.quantity - 1)
+                        }
+                        disabled={item.quantity <= 1}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="w-12 text-center font-medium">
+                        {item.quantity}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          updateQuantity(item.id, item.quantity + 1)
+                        }
+                        disabled={!item.inStock}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* Item Total */}
+                    <div className="text-right">
+                      <div className="font-semibold">
+                        ₹{(item.price * item.quantity).toLocaleString()}
+                      </div>
+                      {item.originalPrice && (
+                        <div className="text-sm text-muted-foreground line-through">
+                          ₹
+                          {(
+                            item.originalPrice * item.quantity
+                          ).toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Remove Button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFromCart(item.id)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
+
+                  {/* Stock Status */}
+                  {!item.inStock && (
+                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        ⚠️ This item is currently out of stock
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
-            
-            {/* Continue Shopping */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold mb-1">Want to add more items?</h3>
-                    <p className="text-sm text-muted-foreground">Continue shopping to add more products</p>
-                  </div>
-                  <Button variant="outline" asChild>
-                    <Link to="/">Continue Shopping</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
           </div>
 
           {/* Order Summary */}
-          <div className="space-y-6">
-            {/* Promo Code */}
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-4">Apply Coupon</h3>
-                <div className="flex gap-2">
-                  <Input placeholder="Enter coupon code" />
-                  <Button variant="outline">
-                    <Tag className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Order Summary */}
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-4">Order Summary</h3>
-                
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span>Subtotal ({cartItems.length} items)</span>
-                    <span>{formatPrice(subtotal)}</span>
-                  </div>
-                  
-                  <div className="flex justify-between text-green-600">
-                    <span>You Save</span>
-                    <span>-{formatPrice(savings)}</span>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <span>Delivery Fee</span>
-                    <span>{deliveryFee === 0 ? "FREE" : formatPrice(deliveryFee)}</span>
-                  </div>
-                  
-                  {deliveryFee > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Add {formatPrice(50000 - subtotal)} more for free delivery
-                    </p>
-                  )}
-                  
-                  <hr />
-                  
-                  <div className="flex justify-between text-lg font-bold">
-                    <span>Total</span>
-                    <span>{formatPrice(total)}</span>
-                  </div>
-                </div>
-                
-                <Button className="w-full mt-6" size="lg">
-                  Proceed to Checkout
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Delivery Info */}
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-4">Delivery Information</h3>
-                
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <div className="text-sm">
-                      <p className="font-medium">Deliver to Mumbai 400001</p>
-                      <Button variant="link" className="p-0 h-auto text-xs">
-                        Change location
+          <div className="lg:col-span-1">
+            <Card className="sticky top-6">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <ShoppingCart className="h-5 w-5 mr-2" />
+                  Order Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Coupon Code */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Coupon Code</label>
+                  {couponCode ? (
+                    <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <Tag className="h-4 w-4 text-green-600" />
+                        <span className="font-medium text-green-800">
+                          {couponCode}
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRemoveCoupon}
+                        className="text-green-600 hover:text-green-800"
+                      >
+                        <X className="h-4 w-4" />
                       </Button>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <Truck className="h-4 w-4 text-green-600" />
-                    <div className="text-sm">
-                      <p className="font-medium text-green-600">Estimated delivery</p>
-                      <p className="text-muted-foreground">2-3 business days</p>
+                  ) : (
+                    <div className="flex space-x-2">
+                      <Input
+                        placeholder="Enter coupon code"
+                        value={couponInput}
+                        onChange={(e) => setCouponInput(e.target.value)}
+                        onKeyPress={(e) =>
+                          e.key === "Enter" && handleApplyCoupon()
+                        }
+                      />
+                      <Button
+                        onClick={handleApplyCoupon}
+                        disabled={isApplyingCoupon || !couponInput.trim()}
+                        size="sm"
+                      >
+                        {isApplyingCoupon ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Apply"
+                        )}
+                      </Button>
                     </div>
+                  )}
+                </div>
+
+                <Separator />
+
+                {/* Price Breakdown */}
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Subtotal ({totalItems} items)</span>
+                    <span>₹{subtotal.toLocaleString()}</span>
+                  </div>
+
+                  {totalDiscount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount</span>
+                      <span>-₹{totalDiscount.toLocaleString()}</span>
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  <div className="flex justify-between font-semibold text-lg">
+                    <span>Total</span>
+                    <span>₹{total.toLocaleString()}</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Security Badge */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 text-center">
-                  <Shield className="h-8 w-8 text-green-600" />
-                  <div className="text-sm">
-                    <p className="font-medium">Secure Checkout</p>
-                    <p className="text-muted-foreground">Your payment information is protected</p>
+                {/* Checkout Button */}
+                <Button
+                  onClick={handleCheckout}
+                  disabled={isCheckingOut || items.length === 0}
+                  className="w-full"
+                  size="lg"
+                >
+                  {isCheckingOut ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Proceed to Checkout
+                    </>
+                  )}
+                </Button>
+
+                {/* Additional Info */}
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div className="flex items-center">
+                    <Truck className="h-3 w-3 mr-1" />
+                    Free shipping on orders above ₹999
                   </div>
+                  <div>Secure checkout with SSL encryption</div>
+                  <div>30-day return policy</div>
                 </div>
               </CardContent>
             </Card>

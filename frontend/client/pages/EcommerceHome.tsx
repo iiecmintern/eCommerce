@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { useCart } from "@/contexts/CartContext";
 import {
   Search,
   Star,
@@ -32,6 +34,8 @@ import {
 } from "lucide-react";
 
 export default function EcommerceHome() {
+  const { toast } = useToast();
+  const { addToCart } = useCart();
   const [searchQuery, setSearchQuery] = useState("");
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -446,7 +450,32 @@ export default function EcommerceHome() {
                       </div>
 
                       <div className="flex space-x-2">
-                        <Button className="flex-1" size="sm">
+                        <Button
+                          className="flex-1"
+                          size="sm"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const cartItem = {
+                              id: product._id || product.id,
+                              name: product.name,
+                              price: product.price,
+                              originalPrice: product.originalPrice,
+                              image:
+                                product.images?.[0] ||
+                                "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
+                              vendor: product.vendor || "Unknown Vendor",
+                              store: product.store || "Unknown Store",
+                              inStock: product.inStock !== false,
+                              maxQuantity: 10,
+                            };
+                            addToCart(cartItem);
+                            toast({
+                              title: "Added to Cart!",
+                              description: `${product.name} has been added to your cart`,
+                            });
+                          }}
+                        >
                           <ShoppingCart className="h-3 w-3 mr-1" />
                           Add to Cart
                         </Button>

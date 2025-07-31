@@ -4,6 +4,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Star,
   Heart,
@@ -13,6 +14,8 @@ import {
   List,
   SlidersHorizontal,
   Package,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 
 export default function CategoryPage() {
@@ -21,6 +24,7 @@ export default function CategoryPage() {
   const [sortBy, setSortBy] = useState("popularity");
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [categoryInfo, setCategoryInfo] = useState<any>(null);
 
   // Category data mapping
@@ -45,523 +49,350 @@ export default function CategoryPage() {
     },
     "sports-&-outdoors": {
       title: "Sports & Outdoors",
-      description: "Fitness and outdoor activities",
+      description: "Fitness equipment and outdoor gear",
       banner:
-        "https://images.pexels.com/photos/4056530/pexels-photo-4056530.jpeg",
-    },
-    "health-&-beauty": {
-      title: "Health & Beauty",
-      description: "Personal care and wellness",
-      banner:
-        "https://images.pexels.com/photos/3785147/pexels-photo-3785147.jpeg",
+        "https://images.pexels.com/photos/4164761/pexels-photo-4164761.jpeg",
     },
     books: {
       title: "Books",
-      description: "Knowledge and entertainment",
+      description: "Best-selling books and literature",
       banner:
-        "https://images.pexels.com/photos/33156848/pexels-photo-33156848.jpeg",
+        "https://images.pexels.com/photos/3747468/pexels-photo-3747468.jpeg",
+    },
+    beauty: {
+      title: "Beauty & Personal Care",
+      description: "Cosmetics and personal care products",
+      banner:
+        "https://images.pexels.com/photos/3785147/pexels-photo-3785147.jpeg",
     },
   };
 
-  // Load products for the category
+  // Mock products data
+  const mockProducts = [
+    {
+      id: 1,
+      name: "Samsung Galaxy S24 Ultra",
+      price: "₹1,24,999",
+      originalPrice: "₹1,49,999",
+      discount: "17% off",
+      rating: 4.5,
+      reviews: 2847,
+      image:
+        "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
+      badge: "Best Seller",
+      inStock: true,
+      freeDelivery: true,
+    },
+    {
+      id: 2,
+      name: "Apple iPhone 15 Pro Max",
+      price: "₹1,59,900",
+      originalPrice: "₹1,79,900",
+      discount: "11% off",
+      rating: 4.8,
+      reviews: 1523,
+      image:
+        "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
+      badge: "Premium",
+      inStock: true,
+      freeDelivery: true,
+    },
+    {
+      id: 3,
+      name: "OnePlus 12 5G",
+      price: "₹69,999",
+      originalPrice: "₹79,999",
+      discount: "13% off",
+      rating: 4.6,
+      reviews: 892,
+      image:
+        "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
+      badge: "New Launch",
+      inStock: true,
+      freeDelivery: true,
+    },
+    {
+      id: 4,
+      name: "MacBook Pro M3",
+      price: "₹1,99,900",
+      originalPrice: "₹2,19,900",
+      discount: "9% off",
+      rating: 4.9,
+      reviews: 567,
+      image:
+        "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
+      badge: "Premium",
+      inStock: true,
+      freeDelivery: true,
+    },
+    {
+      id: 5,
+      name: "Dell XPS 13",
+      price: "₹1,49,999",
+      originalPrice: "₹1,69,999",
+      discount: "12% off",
+      rating: 4.4,
+      reviews: 234,
+      image:
+        "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
+      badge: "Popular",
+      inStock: false,
+      freeDelivery: true,
+    },
+    {
+      id: 6,
+      name: "Sony WH-1000XM5",
+      price: "₹29,999",
+      originalPrice: "₹34,999",
+      discount: "14% off",
+      rating: 4.7,
+      reviews: 1234,
+      image:
+        "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
+      badge: "Best Seller",
+      inStock: true,
+      freeDelivery: true,
+    },
+  ];
+
+  // Load category data and products
   useEffect(() => {
-    const loadCategoryProducts = async () => {
+    const loadCategoryData = async () => {
       try {
         setIsLoading(true);
+        setError(null);
 
-        // Convert URL parameter to proper category name
-        const categoryParam = category || "electronics";
-        let categoryName = categoryParam
-          .replace(/-/g, " ")
-          .replace(/\b\w/g, (l) => l.toUpperCase());
-
-        // Handle special cases for category mapping
-        const categoryMapping: { [key: string]: string } = {
-          "home & kitchen": "Home & Kitchen",
-          "sports & outdoors": "Sports & Outdoors",
-          "health & beauty": "Health & Beauty",
-          "toys & games": "Toys & Games",
-          "food & beverage": "Food & Beverage",
-          "art & crafts": "Art & Crafts",
-          "business & industrial": "Business & Industrial",
-        };
-
-        const lowerCategory = categoryName.toLowerCase();
-        if (categoryMapping[lowerCategory]) {
-          categoryName = categoryMapping[lowerCategory];
-        }
-
-        // Get current category info
-        const currentCategoryInfo =
-          categoryData[categoryParam] || categoryData.electronics;
+        // Simulate API call delay
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
         // Set category info
-        setCategoryInfo(currentCategoryInfo);
+        const currentCategory = category || "electronics";
+        const info = categoryData[currentCategory];
 
-        // Fetch products for this category
-        const response = await fetch(
-          `http://localhost:5000/api/products?category=${encodeURIComponent(categoryName)}&limit=20`,
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setProducts(data.data || []);
-        } else {
-          console.error("Failed to fetch products for category:", categoryName);
-          setProducts([]);
+        if (!info) {
+          throw new Error(`Category "${currentCategory}" not found`);
         }
+
+        setCategoryInfo(info);
+        setProducts(mockProducts);
       } catch (error) {
-        console.error("Error loading category products:", error);
+        console.error("Error loading category data:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load category data",
+        );
         setProducts([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadCategoryProducts();
-  }, [category]); // Removed currentCategory from dependencies
+    loadCategoryData();
+  }, [category]);
 
-  // Helper function to format product data for display
-  const formatProductForDisplay = (product: any) => {
-    const originalPrice = product.price * 1.2; // 20% markup for original price
-    const discount = Math.round(
-      ((originalPrice - product.price) / originalPrice) * 100,
-    );
-
-    return {
-      id: product._id || product.id,
-      name: product.name,
-      price: `₹${product.price?.toLocaleString() || 0}`,
-      originalPrice: `₹${Math.round(originalPrice).toLocaleString()}`,
-      discount: `${discount}% off`,
-      rating: product.averageRating || 4.0,
-      reviews: product.reviewCount || Math.floor(Math.random() * 1000) + 100,
-      image:
-        product.images?.[0]?.url ||
-        product.images?.[0] ||
-        "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
-      badge: product.isFeatured ? "Featured" : "New",
-      inStock: product.stockQuantity > 0,
-      freeDelivery: true,
-      features: product.specifications
-        ?.slice(0, 3)
-        .map((spec: any) => `${spec.name}: ${spec.value}`) || [
-        "High Quality",
-        "Fast Delivery",
-        "Best Price",
-      ],
-    };
+  // Retry loading data
+  const handleRetry = () => {
+    setError(null);
+    setIsLoading(true);
+    // Trigger useEffect by updating a dependency
+    setProducts([]);
   };
 
-  const filters = [
-    {
-      title: "Price Range",
-      options: [
-        "Under ₹10,000",
-        "₹10,000 - ₹25,000",
-        "₹25,000 - ₹50,000",
-        "₹50,000 - ₹1,00,000",
-        "Above ₹1,00,000",
-      ],
-    },
-    {
-      title: "Brand",
-      options: ["Samsung", "Apple", "Sony", "Dell", "Canon", "OnePlus"],
-    },
-    {
-      title: "Customer Rating",
-      options: ["4★ & above", "3★ & above", "2★ & above", "1★ & above"],
-    },
-    {
-      title: "Availability",
-      options: ["In Stock", "Free Delivery", "Cash on Delivery", "Discounted"],
-    },
-  ];
+  // Handle loading state
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg text-muted-foreground">Loading category...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Handle error state
+  if (error) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center p-6">
+          <div className="max-w-md w-full text-center">
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            <Button onClick={handleRetry} className="w-full">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Handle no category info
+  if (!categoryInfo) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Category Not Found</h2>
+            <p className="text-muted-foreground">
+              The requested category could not be found.
+            </p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
-      {/* Category Banner */}
-      <div className="relative h-64 bg-gradient-to-r from-primary/20 to-accent/20">
-        <img
-          src={
-            categoryInfo?.banner ||
-            "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg"
-          }
-          alt={categoryInfo?.title || "Category"}
-          className="w-full h-full object-cover opacity-30"
-        />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold mb-2">
-              {categoryInfo?.title || "Category"}
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              {categoryInfo?.description || "Browse our products"}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="container py-6">
-        {/* Category Controls */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold">
-              {categoryInfo?.title || "Category"} Products
-            </h2>
-            <p className="text-muted-foreground">
-              Showing {products.length} results
-            </p>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            {/* View Mode Toggle */}
-            <div className="flex rounded-lg border">
-              <Button
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("grid")}
-                className="rounded-r-none"
-                title="Grid view"
-              >
-                <Grid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("list")}
-                className="rounded-l-none"
-                title="List view"
-              >
-                <List className="h-4 w-4" />
-              </Button>
+      <div className="space-y-6 p-6">
+        {/* Category Header */}
+        <div className="relative h-64 rounded-lg overflow-hidden">
+          <img
+            src={categoryInfo.banner}
+            alt={categoryInfo.title}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              console.error("Error loading banner image:", e);
+              // Fallback to a default image or placeholder
+              e.currentTarget.src =
+                "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg";
+            }}
+          />
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <div className="text-center text-white">
+              <h1 className="text-4xl font-bold mb-2">{categoryInfo.title}</h1>
+              <p className="text-lg">{categoryInfo.description}</p>
             </div>
-
-            {/* Sort Dropdown */}
-            <select
-              className="px-3 py-2 border rounded-lg text-sm"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              title="Sort products"
-            >
-              <option value="popularity">Sort by Popularity</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="rating">Customer Rating</option>
-              <option value="newest">Newest First</option>
-              <option value="discount">Highest Discount</option>
-            </select>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-6">
-          {/* Filters Sidebar */}
-          <div className="lg:col-span-1">
-            <Card className="sticky top-6">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold">Filters</h3>
-                  <Button variant="ghost" size="sm" title="Filter options">
-                    <SlidersHorizontal className="h-4 w-4" />
+        {/* Filters and Sort */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm">
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+            </Button>
+            <Button variant="outline" size="sm">
+              <SlidersHorizontal className="h-4 w-4 mr-2" />
+              Sort
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === "grid" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("grid")}
+            >
+              <Grid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Products Grid */}
+        {products.length === 0 ? (
+          <div className="text-center py-12">
+            <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">No Products Found</h3>
+            <p className="text-muted-foreground">
+              No products available in this category at the moment.
+            </p>
+          </div>
+        ) : (
+          <div
+            className={`grid gap-6 ${
+              viewMode === "grid"
+                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                : "grid-cols-1"
+            }`}
+          >
+            {products.map((product) => (
+              <Card
+                key={product.id}
+                className="group hover:shadow-lg transition-all duration-300"
+              >
+                <div className="relative">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-48 object-cover rounded-t-lg"
+                    onError={(e) => {
+                      console.error("Error loading product image:", e);
+                      // Fallback to a default image
+                      e.currentTarget.src =
+                        "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg";
+                    }}
+                  />
+                  {product.badge && (
+                    <Badge
+                      className="absolute top-2 left-2"
+                      variant="secondary"
+                    >
+                      {product.badge}
+                    </Badge>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Heart className="h-4 w-4" />
                   </Button>
                 </div>
 
-                <div className="space-y-6">
-                  {filters.map((filter, index) => (
-                    <div key={index}>
-                      <h4 className="font-medium mb-3">{filter.title}</h4>
-                      <div className="space-y-2">
-                        {filter.options.map((option, i) => (
-                          <label
-                            key={i}
-                            className="flex items-center space-x-2 text-sm"
-                          >
-                            <input type="checkbox" className="rounded" />
-                            <span>{option}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <Button className="w-full mt-6" variant="outline">
-                  Apply Filters
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Products Grid */}
-          <div className="lg:col-span-3">
-            {isLoading ? (
-              // Loading skeleton
-              <div
-                className={
-                  viewMode === "grid"
-                    ? "grid md:grid-cols-2 xl:grid-cols-3 gap-6"
-                    : "space-y-4"
-                }
-              >
-                {Array.from({ length: 6 }).map((_, index) => (
-                  <Card key={index} className="animate-pulse">
-                    <div className="h-48 bg-gray-200 rounded-t-lg"></div>
-                    <CardContent className="p-4">
-                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded mb-2"></div>
-                      <div className="h-6 bg-gray-200 rounded mb-3"></div>
-                      <div className="h-3 bg-gray-200 rounded mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded mb-4"></div>
-                      <div className="flex space-x-2">
-                        <div className="flex-1 h-8 bg-gray-200 rounded"></div>
-                        <div className="w-20 h-8 bg-gray-200 rounded"></div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : products.length > 0 ? (
-              <div
-                className={
-                  viewMode === "grid"
-                    ? "grid md:grid-cols-2 xl:grid-cols-3 gap-6"
-                    : "space-y-4"
-                }
-              >
-                {products.map((product) => {
-                  const formattedProduct = formatProductForDisplay(product);
-                  return (
-                    <Card
-                      key={formattedProduct.id}
-                      className={`group hover:shadow-lg transition-all duration-300 cursor-pointer ${viewMode === "list" ? "overflow-hidden" : ""}`}
-                    >
-                      {viewMode === "grid" ? (
-                        <>
-                          <div className="relative">
-                            <img
-                              src={formattedProduct.image}
-                              alt={formattedProduct.name}
-                              className="w-full h-48 object-cover rounded-t-lg group-hover:scale-105 transition-transform duration-300"
-                            />
-                            <Badge
-                              className="absolute top-2 left-2"
-                              variant="secondary"
-                            >
-                              {formattedProduct.badge}
-                            </Badge>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 hover:bg-white"
-                              title="Add to wishlist"
-                            >
-                              <Heart className="h-4 w-4" />
-                            </Button>
-                            <div className="absolute bottom-2 right-2 bg-green-600 text-white px-2 py-1 rounded text-xs font-medium">
-                              {formattedProduct.discount}
-                            </div>
-                          </div>
-
-                          <CardContent className="p-4">
-                            <h3 className="font-medium mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-                              {formattedProduct.name}
-                            </h3>
-
-                            <div className="flex items-center mb-2">
-                              <div className="flex items-center">
-                                {[...Array(5)].map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`h-3 w-3 ${i < Math.floor(formattedProduct.rating) ? "text-yellow-500 fill-current" : "text-gray-300"}`}
-                                  />
-                                ))}
-                              </div>
-                              <span className="text-sm text-muted-foreground ml-2">
-                                ({formattedProduct.reviews})
-                              </span>
-                            </div>
-
-                            <div className="mb-3">
-                              <div className="flex items-baseline space-x-2">
-                                <span className="text-lg font-bold">
-                                  {formattedProduct.price}
-                                </span>
-                                <span className="text-sm text-muted-foreground line-through">
-                                  {formattedProduct.originalPrice}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center space-x-2 mb-4 text-xs">
-                              {formattedProduct.freeDelivery && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-green-600"
-                                >
-                                  Free Delivery
-                                </Badge>
-                              )}
-                              {formattedProduct.inStock ? (
-                                <Badge
-                                  variant="outline"
-                                  className="text-green-600"
-                                >
-                                  In Stock
-                                </Badge>
-                              ) : (
-                                <Badge
-                                  variant="outline"
-                                  className="text-red-600"
-                                >
-                                  Out of Stock
-                                </Badge>
-                              )}
-                            </div>
-
-                            <div className="flex space-x-2">
-                              <Button
-                                className="flex-1"
-                                size="sm"
-                                disabled={!formattedProduct.inStock}
-                              >
-                                <ShoppingCart className="h-3 w-3 mr-1" />
-                                Add to Cart
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </>
-                      ) : (
-                        <div className="flex p-4">
-                          <div className="relative w-48 h-36 flex-shrink-0">
-                            <img
-                              src={formattedProduct.image}
-                              alt={formattedProduct.name}
-                              className="w-full h-full object-cover rounded-lg"
-                            />
-                            <Badge
-                              className="absolute top-2 left-2"
-                              variant="secondary"
-                            >
-                              {formattedProduct.badge}
-                            </Badge>
-                          </div>
-
-                          <div className="flex-1 ml-6">
-                            <div className="flex justify-between items-start mb-2">
-                              <h3 className="font-medium text-lg group-hover:text-primary transition-colors">
-                                {formattedProduct.name}
-                              </h3>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                title="Add to wishlist"
-                              >
-                                <Heart className="h-4 w-4" />
-                              </Button>
-                            </div>
-
-                            <div className="flex items-center mb-3">
-                              <div className="flex items-center">
-                                {[...Array(5)].map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`h-3 w-3 ${i < Math.floor(formattedProduct.rating) ? "text-yellow-500 fill-current" : "text-gray-300"}`}
-                                  />
-                                ))}
-                              </div>
-                              <span className="text-sm text-muted-foreground ml-2">
-                                ({formattedProduct.reviews} reviews)
-                              </span>
-                            </div>
-
-                            <div className="flex items-center space-x-4 mb-3">
-                              <div className="flex items-baseline space-x-2">
-                                <span className="text-xl font-bold">
-                                  {formattedProduct.price}
-                                </span>
-                                <span className="text-sm text-muted-foreground line-through">
-                                  {formattedProduct.originalPrice}
-                                </span>
-                                <span className="text-sm text-green-600 font-medium">
-                                  {formattedProduct.discount}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2 text-xs">
-                                {formattedProduct.freeDelivery && (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-green-600"
-                                  >
-                                    Free Delivery
-                                  </Badge>
-                                )}
-                                {formattedProduct.inStock ? (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-green-600"
-                                  >
-                                    In Stock
-                                  </Badge>
-                                ) : (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-red-600"
-                                  >
-                                    Out of Stock
-                                  </Badge>
-                                )}
-                              </div>
-
-                              <div className="flex space-x-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  disabled={!formattedProduct.inStock}
-                                >
-                                  <ShoppingCart className="h-3 w-3 mr-1" />
-                                  Add to Cart
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  disabled={!formattedProduct.inStock}
-                                >
-                                  Buy Now
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </Card>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <div className="text-muted-foreground mb-4">
-                  <Package className="h-12 w-12 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">
-                    No products found in this category
+                <CardContent className="p-4">
+                  <h3 className="font-semibold text-lg mb-2 line-clamp-2">
+                    {product.name}
                   </h3>
-                  <p className="text-sm">
-                    Try browsing other categories or check back later for new
-                    products!
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Load More */}
-            <div className="text-center mt-8">
-              <Button variant="outline" className="px-8">
-                Load More Products
-              </Button>
-            </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center">
+                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                      <span className="text-sm ml-1">{product.rating}</span>
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      ({product.reviews})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-lg font-bold">{product.price}</span>
+                    <span className="text-sm text-muted-foreground line-through">
+                      {product.originalPrice}
+                    </span>
+                    <Badge variant="destructive" className="text-xs">
+                      {product.discount}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Button className="flex-1 mr-2" disabled={!product.inStock}>
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      {product.inStock ? "Add to Cart" : "Out of Stock"}
+                    </Button>
+                  </div>
+                  {product.freeDelivery && (
+                    <p className="text-xs text-green-600 mt-2">
+                      ✓ Free Delivery
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </div>
+        )}
       </div>
     </Layout>
   );

@@ -66,15 +66,24 @@ const getAllProducts = async (req, res) => {
     // Execute query with pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const products = await Product.find(query)
-      .populate("vendor", "firstName lastName company")
-      .populate("store", "name")
-      .sort(sort)
-      .skip(skip)
-      .limit(parseInt(limit))
-      .select("-__v");
+    let products, total;
+    try {
+      products = await Product.find(query)
+        .populate("vendor", "firstName lastName company")
+        .populate("store", "name")
+        .sort(sort)
+        .skip(skip)
+        .limit(parseInt(limit))
+        .select("-__v");
 
-    const total = await Product.countDocuments(query);
+      total = await Product.countDocuments(query);
+    } catch (error) {
+      console.error("Error executing product query:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error fetching products from database",
+      });
+    }
 
     res.json({
       success: true,
@@ -90,8 +99,8 @@ const getAllProducts = async (req, res) => {
     console.error("Error fetching products:", error);
     res.status(500).json({
       success: false,
-      message: "Error fetching products",
-      error: error.message,
+      message: "Internal server error while fetching products",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -103,17 +112,30 @@ const getProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Check if id is ObjectId or slug
-    const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Product ID is required",
+      });
+    }
 
-    const query = isObjectId ? { _id: id } : { slug: id };
-    query.status = "active";
-    query.isPublished = true;
-
-    const product = await Product.findOne(query)
-      .populate("vendor", "firstName lastName company phone email")
-      .populate("store", "name description contact")
-      .select("-__v");
+    let product;
+    try {
+      product = await Product.findOne({
+        $or: [{ _id: id }, { slug: id }],
+        status: "active",
+        isPublished: true,
+      })
+        .populate("vendor", "firstName lastName company")
+        .populate("store", "name")
+        .select("-__v");
+    } catch (error) {
+      console.error("Error finding product:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error retrieving product from database",
+      });
+    }
 
     if (!product) {
       return res.status(404).json({
@@ -130,8 +152,8 @@ const getProduct = async (req, res) => {
     console.error("Error fetching product:", error);
     res.status(500).json({
       success: false,
-      message: "Error fetching product",
-      error: error.message,
+      message: "Internal server error while fetching product",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -149,26 +171,45 @@ const getProductsByCategory = async (req, res) => {
       sortOrder = "desc",
     } = req.query;
 
+    if (!category) {
+      return res.status(400).json({
+        success: false,
+        message: "Category is required",
+      });
+    }
+
+    // Build query
     const query = {
-      category,
+      category: category,
       status: "active",
       isPublished: true,
     };
 
+    // Build sort object
     const sort = {};
     sort[sortBy] = sortOrder === "desc" ? -1 : 1;
 
+    // Execute query with pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const products = await Product.find(query)
-      .populate("vendor", "firstName lastName company")
-      .populate("store", "name")
-      .sort(sort)
-      .skip(skip)
-      .limit(parseInt(limit))
-      .select("-__v");
+    let products, total;
+    try {
+      products = await Product.find(query)
+        .populate("vendor", "firstName lastName company")
+        .populate("store", "name")
+        .sort(sort)
+        .skip(skip)
+        .limit(parseInt(limit))
+        .select("-__v");
 
-    const total = await Product.countDocuments(query);
+      total = await Product.countDocuments(query);
+    } catch (error) {
+      console.error("Error executing category product query:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error fetching products by category",
+      });
+    }
 
     res.json({
       success: true,
@@ -184,8 +225,8 @@ const getProductsByCategory = async (req, res) => {
     console.error("Error fetching products by category:", error);
     res.status(500).json({
       success: false,
-      message: "Error fetching products by category",
-      error: error.message,
+      message: "Internal server error while fetching products by category",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -197,11 +238,25 @@ const getFeaturedProducts = async (req, res) => {
   try {
     const { limit = 8 } = req.query;
 
-    const products = await Product.findFeatured()
-      .populate("vendor", "firstName lastName company")
-      .populate("store", "name")
-      .limit(parseInt(limit))
-      .select("-__v");
+    let products;
+    try {
+      products = await Product.find({
+        isFeatured: true,
+        status: "active",
+        isPublished: true,
+      })
+        .populate("vendor", "firstName lastName company")
+        .populate("store", "name")
+        .sort({ createdAt: -1 })
+        .limit(parseInt(limit))
+        .select("-__v");
+    } catch (error) {
+      console.error("Error fetching featured products:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error fetching featured products",
+      });
+    }
 
     res.json({
       success: true,
@@ -211,8 +266,8 @@ const getFeaturedProducts = async (req, res) => {
     console.error("Error fetching featured products:", error);
     res.status(500).json({
       success: false,
-      message: "Error fetching featured products",
-      error: error.message,
+      message: "Internal server error while fetching featured products",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -226,7 +281,10 @@ const searchProducts = async (req, res) => {
       q,
       page = 1,
       limit = 12,
-      sortBy = "createdAt",
+      category,
+      minPrice,
+      maxPrice,
+      sortBy = "relevance",
       sortOrder = "desc",
     } = req.query;
 
@@ -237,26 +295,54 @@ const searchProducts = async (req, res) => {
       });
     }
 
+    // Build query
     const query = {
-      $text: { $search: q },
       status: "active",
       isPublished: true,
+      $text: { $search: q },
     };
 
-    const sort = {};
-    sort[sortBy] = sortOrder === "desc" ? -1 : 1;
+    // Category filter
+    if (category) {
+      query.category = category;
+    }
 
+    // Price range filter
+    if (minPrice || maxPrice) {
+      query.price = {};
+      if (minPrice) query.price.$gte = parseFloat(minPrice);
+      if (maxPrice) query.price.$lte = parseFloat(maxPrice);
+    }
+
+    // Build sort object
+    let sort = {};
+    if (sortBy === "relevance") {
+      sort = { score: { $meta: "textScore" } };
+    } else {
+      sort[sortBy] = sortOrder === "desc" ? -1 : 1;
+    }
+
+    // Execute query with pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const products = await Product.find(query)
-      .populate("vendor", "firstName lastName company")
-      .populate("store", "name")
-      .sort(sort)
-      .skip(skip)
-      .limit(parseInt(limit))
-      .select("-__v");
+    let products, total;
+    try {
+      products = await Product.find(query)
+        .populate("vendor", "firstName lastName company")
+        .populate("store", "name")
+        .sort(sort)
+        .skip(skip)
+        .limit(parseInt(limit))
+        .select("-__v");
 
-    const total = await Product.countDocuments(query);
+      total = await Product.countDocuments(query);
+    } catch (error) {
+      console.error("Error executing search query:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error searching products",
+      });
+    }
 
     res.json({
       success: true,
@@ -272,28 +358,44 @@ const searchProducts = async (req, res) => {
     console.error("Error searching products:", error);
     res.status(500).json({
       success: false,
-      message: "Error searching products",
-      error: error.message,
+      message: "Internal server error while searching products",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
 
-// @desc    Create new product (vendor only)
+// @desc    Create new product
 // @route   POST /api/products
 // @access  Private (Vendor)
 const createProduct = async (req, res) => {
   try {
+    // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: "Validation error",
+        message: "Validation failed",
         errors: errors.array(),
       });
     }
 
+    const productData = {
+      ...req.body,
+      vendor: req.user.id,
+    };
+
     // Check if vendor has a store
-    const store = await Store.findOne({ owner: req.user.id });
+    let store;
+    try {
+      store = await Store.findOne({ owner: req.user.id });
+    } catch (error) {
+      console.error("Error finding vendor store:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error verifying vendor store",
+      });
+    }
+
     if (!store) {
       return res.status(400).json({
         success: false,
@@ -301,51 +403,83 @@ const createProduct = async (req, res) => {
       });
     }
 
-    const productData = {
-      ...req.body,
-      vendor: req.user.id,
-      store: store._id,
-    };
+    productData.store = store._id;
 
-    const product = new Product(productData);
-    await product.save();
+    let product;
+    try {
+      product = await Product.create(productData);
+    } catch (error) {
+      console.error("Error creating product:", error);
+      if (error.code === 11000) {
+        return res.status(400).json({
+          success: false,
+          message: "Product with this name already exists",
+        });
+      }
+      return res.status(500).json({
+        success: false,
+        message: "Error creating product",
+      });
+    }
 
-    const populatedProduct = await Product.findById(product._id)
-      .populate("vendor", "firstName lastName company")
-      .populate("store", "name");
+    // Populate vendor and store info
+    try {
+      await product.populate("vendor", "firstName lastName company");
+      await product.populate("store", "name");
+    } catch (error) {
+      console.error("Error populating product:", error);
+      // Don't fail the creation for this error
+    }
 
     res.status(201).json({
       success: true,
       message: "Product created successfully",
-      data: populatedProduct,
+      data: product,
     });
   } catch (error) {
     console.error("Error creating product:", error);
     res.status(500).json({
       success: false,
-      message: "Error creating product",
-      error: error.message,
+      message: "Internal server error while creating product",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
 
-// @desc    Update product (vendor only)
+// @desc    Update product
 // @route   PUT /api/products/:id
 // @access  Private (Vendor)
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const errors = validationResult(req);
 
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Product ID is required",
+      });
+    }
+
+    // Check for validation errors
+    const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: "Validation error",
+        message: "Validation failed",
         errors: errors.array(),
       });
     }
 
-    const product = await Product.findById(id);
+    let product;
+    try {
+      product = await Product.findById(id);
+    } catch (error) {
+      console.error("Error finding product for update:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error finding product",
+      });
+    }
 
     if (!product) {
       return res.status(404).json({
@@ -362,36 +496,67 @@ const updateProduct = async (req, res) => {
       });
     }
 
-    const updatedProduct = await Product.findByIdAndUpdate(id, req.body, {
-      new: true,
-      runValidators: true,
-    })
-      .populate("vendor", "firstName lastName company")
-      .populate("store", "name");
+    // Update product
+    try {
+      const updatedProduct = await Product.findByIdAndUpdate(id, req.body, {
+        new: true,
+        runValidators: true,
+      })
+        .populate("vendor", "firstName lastName company")
+        .populate("store", "name");
 
-    res.json({
-      success: true,
-      message: "Product updated successfully",
-      data: updatedProduct,
-    });
+      res.json({
+        success: true,
+        message: "Product updated successfully",
+        data: updatedProduct,
+      });
+    } catch (error) {
+      console.error("Error updating product:", error);
+      if (error.code === 11000) {
+        return res.status(400).json({
+          success: false,
+          message: "Product with this name already exists",
+        });
+      }
+      return res.status(500).json({
+        success: false,
+        message: "Error updating product",
+      });
+    }
   } catch (error) {
     console.error("Error updating product:", error);
     res.status(500).json({
       success: false,
-      message: "Error updating product",
-      error: error.message,
+      message: "Internal server error while updating product",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
 
-// @desc    Delete product (vendor only)
+// @desc    Delete product
 // @route   DELETE /api/products/:id
 // @access  Private (Vendor)
 const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const product = await Product.findById(id);
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Product ID is required",
+      });
+    }
+
+    let product;
+    try {
+      product = await Product.findById(id);
+    } catch (error) {
+      console.error("Error finding product for deletion:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error finding product",
+      });
+    }
 
     if (!product) {
       return res.status(404).json({
@@ -408,7 +573,16 @@ const deleteProduct = async (req, res) => {
       });
     }
 
-    await Product.findByIdAndDelete(id);
+    // Delete product
+    try {
+      await Product.findByIdAndDelete(id);
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error deleting product",
+      });
+    }
 
     res.json({
       success: true,
@@ -418,34 +592,63 @@ const deleteProduct = async (req, res) => {
     console.error("Error deleting product:", error);
     res.status(500).json({
       success: false,
-      message: "Error deleting product",
-      error: error.message,
+      message: "Internal server error while deleting product",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
 
 // @desc    Get vendor's products
-// @route   GET /api/products/vendor/my-products
+// @route   GET /api/products/my-products
 // @access  Private (Vendor)
 const getMyProducts = async (req, res) => {
   try {
-    const { page = 1, limit = 12, status } = req.query;
+    const {
+      page = 1,
+      limit = 12,
+      status,
+      category,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = req.query;
 
-    const query = { vendor: req.user.id };
+    // Build query
+    const query = {
+      vendor: req.user.id,
+    };
+
     if (status) {
       query.status = status;
     }
 
+    if (category) {
+      query.category = category;
+    }
+
+    // Build sort object
+    const sort = {};
+    sort[sortBy] = sortOrder === "desc" ? -1 : 1;
+
+    // Execute query with pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const products = await Product.find(query)
-      .populate("store", "name")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .select("-__v");
+    let products, total;
+    try {
+      products = await Product.find(query)
+        .populate("store", "name")
+        .sort(sort)
+        .skip(skip)
+        .limit(parseInt(limit))
+        .select("-__v");
 
-    const total = await Product.countDocuments(query);
+      total = await Product.countDocuments(query);
+    } catch (error) {
+      console.error("Error fetching vendor products:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error fetching your products",
+      });
+    }
 
     res.json({
       success: true,
@@ -461,13 +664,13 @@ const getMyProducts = async (req, res) => {
     console.error("Error fetching vendor products:", error);
     res.status(500).json({
       success: false,
-      message: "Error fetching vendor products",
-      error: error.message,
+      message: "Internal server error while fetching vendor products",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
 
-// @desc    Update product status (vendor only)
+// @desc    Update product status
 // @route   PATCH /api/products/:id/status
 // @access  Private (Vendor)
 const updateProductStatus = async (req, res) => {
@@ -475,14 +678,30 @@ const updateProductStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!["draft", "active", "inactive", "archived"].includes(status)) {
+    if (!id) {
       return res.status(400).json({
         success: false,
-        message: "Invalid status",
+        message: "Product ID is required",
       });
     }
 
-    const product = await Product.findById(id);
+    if (!status || !["draft", "published", "archived"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid status is required (draft, published, archived)",
+      });
+    }
+
+    let product;
+    try {
+      product = await Product.findById(id);
+    } catch (error) {
+      console.error("Error finding product for status update:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error finding product",
+      });
+    }
 
     if (!product) {
       return res.status(404).json({
@@ -499,44 +718,73 @@ const updateProductStatus = async (req, res) => {
       });
     }
 
-    product.status = status;
-    if (status === "active") {
-      product.isPublished = true;
+    // Update status
+    try {
+      const updatedProduct = await Product.findByIdAndUpdate(
+        id,
+        { status },
+        {
+          new: true,
+          runValidators: true,
+        }
+      )
+        .populate("vendor", "firstName lastName company")
+        .populate("store", "name");
+
+      res.json({
+        success: true,
+        message: "Product status updated successfully",
+        data: updatedProduct,
+      });
+    } catch (error) {
+      console.error("Error updating product status:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error updating product status",
+      });
     }
-
-    await product.save();
-
-    res.json({
-      success: true,
-      message: "Product status updated successfully",
-      data: product,
-    });
   } catch (error) {
     console.error("Error updating product status:", error);
     res.status(500).json({
       success: false,
-      message: "Error updating product status",
-      error: error.message,
+      message: "Internal server error while updating product status",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
 
-// @desc    Update product stock (vendor only)
+// @desc    Update product stock
 // @route   PATCH /api/products/:id/stock
 // @access  Private (Vendor)
 const updateProductStock = async (req, res) => {
   try {
     const { id } = req.params;
-    const { stockQuantity, operation = "set" } = req.body;
+    const { stockQuantity } = req.body;
 
-    if (typeof stockQuantity !== "number" || stockQuantity < 0) {
+    if (!id) {
       return res.status(400).json({
         success: false,
-        message: "Invalid stock quantity",
+        message: "Product ID is required",
       });
     }
 
-    const product = await Product.findById(id);
+    if (stockQuantity === undefined || stockQuantity < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid stock quantity is required (>= 0)",
+      });
+    }
+
+    let product;
+    try {
+      product = await Product.findById(id);
+    } catch (error) {
+      console.error("Error finding product for stock update:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error finding product",
+      });
+    }
 
     if (!product) {
       return res.status(404).json({
@@ -553,33 +801,37 @@ const updateProductStock = async (req, res) => {
       });
     }
 
-    if (operation === "set") {
-      product.stockQuantity = stockQuantity;
-    } else if (operation === "increase") {
-      product.stockQuantity += stockQuantity;
-    } else if (operation === "decrease") {
-      product.stockQuantity = Math.max(
-        0,
-        product.stockQuantity - stockQuantity
-      );
+    // Update stock
+    try {
+      const updatedProduct = await Product.findByIdAndUpdate(
+        id,
+        { stockQuantity },
+        {
+          new: true,
+          runValidators: true,
+        }
+      )
+        .populate("vendor", "firstName lastName company")
+        .populate("store", "name");
+
+      res.json({
+        success: true,
+        message: "Product stock updated successfully",
+        data: updatedProduct,
+      });
+    } catch (error) {
+      console.error("Error updating product stock:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error updating product stock",
+      });
     }
-
-    await product.save();
-
-    res.json({
-      success: true,
-      message: "Product stock updated successfully",
-      data: {
-        stockQuantity: product.stockQuantity,
-        stockStatus: product.stockStatus,
-      },
-    });
   } catch (error) {
     console.error("Error updating product stock:", error);
     res.status(500).json({
       success: false,
-      message: "Error updating product stock",
-      error: error.message,
+      message: "Internal server error while updating product stock",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -589,21 +841,30 @@ const updateProductStock = async (req, res) => {
 // @access  Public
 const getCategories = async (req, res) => {
   try {
-    const categories = await Product.distinct("category", {
-      status: "active",
-      isPublished: true,
-    });
+    let categories;
+    try {
+      categories = await Product.distinct("category", {
+        status: "active",
+        isPublished: true,
+      });
+    } catch (error) {
+      console.error("Error fetching product categories:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error fetching product categories",
+      });
+    }
 
     res.json({
       success: true,
       data: categories,
     });
   } catch (error) {
-    console.error("Error fetching categories:", error);
+    console.error("Error fetching product categories:", error);
     res.status(500).json({
       success: false,
-      message: "Error fetching categories",
-      error: error.message,
+      message: "Internal server error while fetching product categories",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };

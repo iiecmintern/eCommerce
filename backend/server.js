@@ -73,6 +73,7 @@ const profileRoutes = require("./routes/auth/profileRoutes");
 const productRoutes = require("./routes/api/productRoutes");
 const orderRoutes = require("./routes/api/orderRoutes");
 const storeRoutes = require("./routes/api/storeRoutes");
+const cartRoutes = require("./routes/api/cartRoutes");
 
 // API Routes
 app.use("/api/auth", authRoutes);
@@ -80,6 +81,7 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/stores", storeRoutes);
+app.use("/api/cart", cartRoutes);
 
 // Test MongoDB connection endpoint
 app.get("/test-db", async (req, res) => {

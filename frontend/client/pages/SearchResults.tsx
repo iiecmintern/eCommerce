@@ -5,26 +5,33 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Search, 
-  Star, 
-  Heart, 
-  ShoppingCart, 
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Search,
+  Star,
+  Heart,
+  ShoppingCart,
   Filter,
   Grid,
   List,
   SlidersHorizontal,
-  ArrowUpDown
+  ArrowUpDown,
+  AlertCircle,
+  RefreshCw,
+  Package,
 } from "lucide-react";
 
 export default function SearchResults() {
   const [searchParams] = useSearchParams();
-  const query = searchParams.get('q') || '';
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [sortBy, setSortBy] = useState('relevance');
+  const query = searchParams.get("q") || "";
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [sortBy, setSortBy] = useState("relevance");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
 
   // Mock search results - in real app, this would come from API
-  const searchResults = [
+  const mockSearchResults = [
     {
       id: 1,
       name: "Samsung Galaxy S24 Ultra Smartphone",
@@ -33,12 +40,19 @@ export default function SearchResults() {
       discount: "17% off",
       rating: 4.5,
       reviews: 2847,
-      image: "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
+      image:
+        "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
       badge: "Best Seller",
-      description: "Latest flagship smartphone with advanced AI features and stunning camera quality.",
-      features: ["256GB Storage", "12GB RAM", "200MP Camera", "5000mAh Battery"],
+      description:
+        "Latest flagship smartphone with advanced AI features and stunning camera quality.",
+      features: [
+        "256GB Storage",
+        "12GB RAM",
+        "200MP Camera",
+        "5000mAh Battery",
+      ],
       inStock: true,
-      freeDelivery: true
+      freeDelivery: true,
     },
     {
       id: 2,
@@ -48,318 +62,344 @@ export default function SearchResults() {
       discount: "11% off",
       rating: 4.8,
       reviews: 1523,
-      image: "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
+      image:
+        "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
       badge: "Premium",
-      description: "Revolutionary titanium design with A17 Pro chip and advanced camera system.",
+      description:
+        "Revolutionary titanium design with A17 Pro chip and advanced camera system.",
       features: ["512GB Storage", "8GB RAM", "48MP Camera", "USB-C"],
       inStock: true,
-      freeDelivery: true
+      freeDelivery: true,
     },
     {
       id: 3,
       name: "OnePlus 12 5G Smartphone",
-      price: "₹64,999",
-      originalPrice: "₹74,999",
+      price: "₹69,999",
+      originalPrice: "₹79,999",
       discount: "13% off",
-      rating: 4.4,
-      reviews: 982,
-      image: "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
-      badge: "Great Value",
-      description: "Flagship performance with OxygenOS and premium build quality.",
-      features: ["256GB Storage", "12GB RAM", "50MP Camera", "100W Charging"],
+      rating: 4.6,
+      reviews: 892,
+      image:
+        "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
+      badge: "New Launch",
+      description:
+        "Flagship killer with Hasselblad camera and blazing fast performance.",
+      features: ["256GB Storage", "16GB RAM", "50MP Camera", "100W Charging"],
       inStock: true,
-      freeDelivery: true
+      freeDelivery: true,
     },
     {
       id: 4,
-      name: "Xiaomi 14 Ultra Photography Phone",
-      price: "₹99,999",
-      originalPrice: "₹1,09,999",
-      discount: "9% off",
-      rating: 4.6,
-      reviews: 756,
-      image: "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
-      badge: "Camera Pro",
-      description: "Professional photography capabilities with Leica optics.",
-      features: ["512GB Storage", "16GB RAM", "50MP Leica Camera", "90W Charging"],
+      name: "MacBook Pro M3 Max",
+      price: "₹3,49,900",
+      originalPrice: "₹3,99,900",
+      discount: "13% off",
+      rating: 4.9,
+      reviews: 567,
+      image:
+        "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
+      badge: "Premium",
+      description:
+        "Most powerful MacBook Pro with M3 Max chip for professionals.",
+      features: ["1TB SSD", "32GB RAM", "14-inch Display", "22-hour Battery"],
+      inStock: true,
+      freeDelivery: true,
+    },
+    {
+      id: 5,
+      name: "Sony WH-1000XM5 Wireless Headphones",
+      price: "₹29,999",
+      originalPrice: "₹34,999",
+      discount: "14% off",
+      rating: 4.7,
+      reviews: 1234,
+      image:
+        "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
+      badge: "Best Seller",
+      description:
+        "Industry-leading noise cancellation with exceptional sound quality.",
+      features: [
+        "30-hour Battery",
+        "Quick Charge",
+        "Touch Controls",
+        "Multi-device",
+      ],
+      inStock: true,
+      freeDelivery: true,
+    },
+    {
+      id: 6,
+      name: "Dell XPS 13 Plus Laptop",
+      price: "₹1,49,999",
+      originalPrice: "₹1,69,999",
+      discount: "12% off",
+      rating: 4.4,
+      reviews: 234,
+      image:
+        "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
+      badge: "Popular",
+      description:
+        "Ultra-slim premium laptop with stunning InfinityEdge display.",
+      features: ["512GB SSD", "16GB RAM", "13.4-inch 4K Display", "Intel i7"],
       inStock: false,
-      freeDelivery: true
-    }
+      freeDelivery: true,
+    },
   ];
 
-  const filters = [
-    {
-      title: "Price Range",
-      options: ["Under ₹25,000", "₹25,000 - ₹50,000", "₹50,000 - ₹1,00,000", "Above ₹1,00,000"]
-    },
-    {
-      title: "Brand",
-      options: ["Samsung", "Apple", "OnePlus", "Xiaomi", "Google", "Sony"]
-    },
-    {
-      title: "Customer Rating",
-      options: ["4★ & above", "3★ & above", "2★ & above", "1★ & above"]
-    },
-    {
-      title: "Features",
-      options: ["Free Delivery", "Cash on Delivery", "In Stock", "Discounted"]
-    }
-  ];
+  // Load search results
+  useEffect(() => {
+    const performSearch = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Simulate API call delay
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        if (!query.trim()) {
+          setSearchResults([]);
+          return;
+        }
+
+        // Simulate search filtering
+        const filteredResults = mockSearchResults.filter(
+          (product) =>
+            product.name.toLowerCase().includes(query.toLowerCase()) ||
+            product.description.toLowerCase().includes(query.toLowerCase()),
+        );
+
+        setSearchResults(filteredResults);
+      } catch (error) {
+        console.error("Error performing search:", error);
+        setError(
+          error instanceof Error ? error.message : "Failed to perform search",
+        );
+        setSearchResults([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    performSearch();
+  }, [query]);
+
+  // Retry search
+  const handleRetry = () => {
+    setError(null);
+    setIsLoading(true);
+    // Trigger useEffect by updating a dependency
+    setSearchResults([]);
+  };
+
+  // Handle loading state
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg text-muted-foreground">
+              Searching for "{query}"...
+            </p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Handle error state
+  if (error) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center p-6">
+          <div className="max-w-md w-full text-center">
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            <Button onClick={handleRetry} className="w-full">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
-      <div className="container py-6">
+      <div className="space-y-6 p-6">
         {/* Search Header */}
-        <div className="mb-6">
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="text-center">
+          <h1 className="text-3xl font-bold mb-2">Search Results</h1>
+          <p className="text-lg text-muted-foreground mb-6">
+            {query ? `Results for "${query}"` : "Enter a search term"}
+          </p>
+
+          {/* Search Input */}
+          <div className="max-w-md mx-auto mb-8">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
-                placeholder="Search for products..."
+                placeholder="Search products..."
                 className="pl-10"
                 defaultValue={query}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter") {
+                    const target = e.target as HTMLInputElement;
+                    if (target.value.trim()) {
+                      window.location.href = `/search?q=${encodeURIComponent(target.value.trim())}`;
+                    }
+                  }
+                }}
               />
-            </div>
-            <Button variant="outline">
-              <Search className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Search Results</h1>
-              <p className="text-muted-foreground">
-                Showing {searchResults.length} results for "{query}"
-              </p>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              {/* View Mode Toggle */}
-              <div className="flex rounded-lg border">
-                <Button
-                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  className="rounded-r-none"
-                >
-                  <Grid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  className="rounded-l-none"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              {/* Sort Dropdown */}
-              <select 
-                className="px-3 py-2 border rounded-lg text-sm"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-              >
-                <option value="relevance">Sort by Relevance</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="rating">Customer Rating</option>
-                <option value="newest">Newest First</option>
-              </select>
             </div>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-6">
-          {/* Filters Sidebar */}
-          <div className="lg:col-span-1">
-            <Card className="sticky top-6">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold">Filters</h3>
-                  <Button variant="ghost" size="sm">
-                    <SlidersHorizontal className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                <div className="space-y-6">
-                  {filters.map((filter, index) => (
-                    <div key={index}>
-                      <h4 className="font-medium mb-3">{filter.title}</h4>
-                      <div className="space-y-2">
-                        {filter.options.map((option, i) => (
-                          <label key={i} className="flex items-center space-x-2 text-sm">
-                            <input type="checkbox" className="rounded" />
-                            <span>{option}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                <Button className="w-full mt-6" variant="outline">
-                  Apply Filters
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Search Results */}
-          <div className="lg:col-span-3">
-            <div className={viewMode === 'grid' ? 'grid md:grid-cols-2 xl:grid-cols-3 gap-6' : 'space-y-4'}>
-              {searchResults.map((product) => (
-                <Card key={product.id} className={`group hover:shadow-lg transition-all duration-300 cursor-pointer ${viewMode === 'list' ? 'overflow-hidden' : ''}`}>
-                  {viewMode === 'grid' ? (
-                    <>
-                      <div className="relative">
-                        <img 
-                          src={product.image} 
-                          alt={product.name}
-                          className="w-full h-48 object-cover rounded-t-lg group-hover:scale-105 transition-transform duration-300"
-                        />
-                        <Badge className="absolute top-2 left-2" variant="secondary">
-                          {product.badge}
-                        </Badge>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 hover:bg-white"
-                        >
-                          <Heart className="h-4 w-4" />
-                        </Button>
-                        <div className="absolute bottom-2 right-2 bg-green-600 text-white px-2 py-1 rounded text-xs font-medium">
-                          {product.discount}
-                        </div>
-                      </div>
-                      
-                      <CardContent className="p-4">
-                        <h3 className="font-medium mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-                          {product.name}
-                        </h3>
-                        
-                        <div className="flex items-center mb-2">
-                          <div className="flex items-center">
-                            {[...Array(5)].map((_, i) => (
-                              <Star 
-                                key={i} 
-                                className={`h-3 w-3 ${i < Math.floor(product.rating) ? 'text-yellow-500 fill-current' : 'text-gray-300'}`} 
-                              />
-                            ))}
-                          </div>
-                          <span className="text-sm text-muted-foreground ml-2">({product.reviews})</span>
-                        </div>
-
-                        <div className="mb-3">
-                          <div className="flex items-baseline space-x-2">
-                            <span className="text-lg font-bold">{product.price}</span>
-                            <span className="text-sm text-muted-foreground line-through">{product.originalPrice}</span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-2 mb-4 text-xs">
-                          {product.freeDelivery && (
-                            <Badge variant="outline" className="text-green-600">Free Delivery</Badge>
-                          )}
-                          {product.inStock ? (
-                            <Badge variant="outline" className="text-green-600">In Stock</Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-red-600">Out of Stock</Badge>
-                          )}
-                        </div>
-
-                        <div className="flex space-x-2">
-                          <Button className="flex-1" size="sm" disabled={!product.inStock}>
-                            <ShoppingCart className="h-3 w-3 mr-1" />
-                            Add to Cart
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </>
-                  ) : (
-                    <div className="flex p-4">
-                      <div className="relative w-48 h-36 flex-shrink-0">
-                        <img 
-                          src={product.image} 
-                          alt={product.name}
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                        <Badge className="absolute top-2 left-2" variant="secondary">
-                          {product.badge}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex-1 ml-6">
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-medium text-lg group-hover:text-primary transition-colors">
-                            {product.name}
-                          </h3>
-                          <Button variant="ghost" size="sm">
-                            <Heart className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        
-                        <div className="flex items-center mb-2">
-                          <div className="flex items-center">
-                            {[...Array(5)].map((_, i) => (
-                              <Star 
-                                key={i} 
-                                className={`h-3 w-3 ${i < Math.floor(product.rating) ? 'text-yellow-500 fill-current' : 'text-gray-300'}`} 
-                              />
-                            ))}
-                          </div>
-                          <span className="text-sm text-muted-foreground ml-2">({product.reviews} reviews)</span>
-                        </div>
-
-                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                          {product.description}
-                        </p>
-
-                        <div className="flex items-center space-x-4 mb-3">
-                          <div className="flex items-baseline space-x-2">
-                            <span className="text-xl font-bold">{product.price}</span>
-                            <span className="text-sm text-muted-foreground line-through">{product.originalPrice}</span>
-                            <span className="text-sm text-green-600 font-medium">{product.discount}</span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2 text-xs">
-                            {product.freeDelivery && (
-                              <Badge variant="outline" className="text-green-600">Free Delivery</Badge>
-                            )}
-                            {product.inStock ? (
-                              <Badge variant="outline" className="text-green-600">In Stock</Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-red-600">Out of Stock</Badge>
-                            )}
-                          </div>
-                          
-                          <div className="flex space-x-2">
-                            <Button variant="outline" size="sm" disabled={!product.inStock}>
-                              <ShoppingCart className="h-3 w-3 mr-1" />
-                              Add to Cart
-                            </Button>
-                            <Button size="sm" disabled={!product.inStock}>
-                              Buy Now
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </Card>
-              ))}
-            </div>
-
-            {/* Load More */}
-            <div className="text-center mt-8">
-              <Button variant="outline" className="px-8">
-                Load More Products
+        {/* Results Summary */}
+        {query && (
+          <div className="flex items-center justify-between">
+            <p className="text-muted-foreground">
+              {searchResults.length} result
+              {searchResults.length !== 1 ? "s" : ""} found
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-2" />
+                Filters
+              </Button>
+              <Button variant="outline" size="sm">
+                <ArrowUpDown className="h-4 w-4 mr-2" />
+                Sort
+              </Button>
+              <Button
+                variant={viewMode === "grid" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+              >
+                <Grid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-4 w-4" />
               </Button>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* No Results */}
+        {query && searchResults.length === 0 && (
+          <div className="text-center py-12">
+            <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">No Results Found</h3>
+            <p className="text-muted-foreground mb-4">
+              We couldn't find any products matching "{query}"
+            </p>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>Try checking your spelling or using different keywords</p>
+              <p>Use more general terms or browse our categories</p>
+            </div>
+          </div>
+        )}
+
+        {/* Search Results Grid */}
+        {searchResults.length > 0 && (
+          <div
+            className={`grid gap-6 ${
+              viewMode === "grid"
+                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                : "grid-cols-1"
+            }`}
+          >
+            {searchResults.map((product) => (
+              <Card
+                key={product.id}
+                className="group hover:shadow-lg transition-all duration-300"
+              >
+                <div className="relative">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-48 object-cover rounded-t-lg"
+                    onError={(e) => {
+                      console.error("Error loading product image:", e);
+                      // Fallback to a default image
+                      e.currentTarget.src =
+                        "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg";
+                    }}
+                  />
+                  {product.badge && (
+                    <Badge
+                      className="absolute top-2 left-2"
+                      variant="secondary"
+                    >
+                      {product.badge}
+                    </Badge>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Heart className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <CardContent className="p-4">
+                  <h3 className="font-semibold text-lg mb-2 line-clamp-2">
+                    {product.name}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                    {product.description}
+                  </p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center">
+                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                      <span className="text-sm ml-1">{product.rating}</span>
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      ({product.reviews})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-lg font-bold">{product.price}</span>
+                    <span className="text-sm text-muted-foreground line-through">
+                      {product.originalPrice}
+                    </span>
+                    <Badge variant="destructive" className="text-xs">
+                      {product.discount}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Button className="flex-1 mr-2" disabled={!product.inStock}>
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      {product.inStock ? "Add to Cart" : "Out of Stock"}
+                    </Button>
+                  </div>
+                  {product.freeDelivery && (
+                    <p className="text-xs text-green-600 mt-2">
+                      ✓ Free Delivery
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Load More */}
+        {searchResults.length > 0 && (
+          <div className="text-center pt-8">
+            <Button variant="outline" className="px-8">
+              Load More Results
+            </Button>
+          </div>
+        )}
       </div>
     </Layout>
   );
