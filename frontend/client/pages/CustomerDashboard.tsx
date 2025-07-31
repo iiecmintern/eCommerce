@@ -197,7 +197,7 @@ export default function CustomerDashboard() {
         ), // 10 points per dollar
         monthlyChange: {
           orders: "+3 this month",
-          spent: "+$394 this month",
+          spent: "+₹394 this month",
           savedItems: "+5 this week",
           points: "+156 this month",
         },
@@ -210,7 +210,7 @@ export default function CustomerDashboard() {
         currentTier: stats.loyaltyPoints >= 2000 ? "Gold" : "Silver",
         nextTier: "Gold",
         benefits: [
-          "Free shipping on orders over $50",
+          "Free shipping on orders over ₹50",
           "Early access to sales",
           "Birthday discounts",
         ],
@@ -279,6 +279,21 @@ export default function CustomerDashboard() {
     fetchDashboardData();
   }, []);
 
+  // Helper function to format currency in Indian Rupees
+  const formatCurrency = (amount: number) => {
+    try {
+      return new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(amount);
+    } catch (error) {
+      console.error("Error formatting currency:", error);
+      return `₹${amount.toLocaleString()}`;
+    }
+  };
+
   // Define orderStats before early returns
   const orderStats = data
     ? [
@@ -291,7 +306,7 @@ export default function CustomerDashboard() {
         },
         {
           title: "Total Spent",
-          value: `$${data.stats.totalSpent.toFixed(2)}`,
+          value: formatCurrency(data.stats.totalSpent),
           change: data.stats.monthlyChange.spent,
           icon: <BarChart3 className="h-5 w-5" />,
           color: "text-green-600",
@@ -692,7 +707,9 @@ export default function CustomerDashboard() {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold">${order.total.toFixed(2)}</p>
+                          <p className="font-bold">
+                            {formatCurrency(order.total)}
+                          </p>
                           <Badge variant={getStatusBadgeVariant(order.status)}>
                             {getStatusDisplayName(order.status)}
                           </Badge>
@@ -904,11 +921,11 @@ export default function CustomerDashboard() {
                           <div className="flex items-center justify-between mb-3">
                             <div>
                               <span className="font-bold">
-                                ${item.price.toFixed(2)}
+                                {formatCurrency(item.price)}
                               </span>
                               {item.originalPrice && (
                                 <span className="text-sm text-muted-foreground line-through ml-2">
-                                  ${item.originalPrice.toFixed(2)}
+                                  {formatCurrency(item.originalPrice)}
                                 </span>
                               )}
                             </div>
@@ -1042,17 +1059,18 @@ export default function CustomerDashboard() {
                           <ul className="space-y-2">
                             <li className="flex items-center text-sm">
                               <Zap className="h-3 w-3 text-primary mr-2" />
-                              Total Revenue: ${data.stats.totalSpent.toFixed(2)}
+                              Total Revenue:{" "}
+                              {formatCurrency(data.stats.totalSpent)}
                             </li>
                             <li className="flex items-center text-sm">
                               <Zap className="h-3 w-3 text-primary mr-2" />
-                              Average Order Value: $
+                              Average Order Value:{" "}
                               {data.stats.totalOrders > 0
-                                ? (
+                                ? formatCurrency(
                                     data.stats.totalSpent /
-                                    data.stats.totalOrders
-                                  ).toFixed(2)
-                                : "0.00"}
+                                      data.stats.totalOrders,
+                                  )
+                                : formatCurrency(0)}
                             </li>
                             <li className="flex items-center text-sm">
                               <Zap className="h-3 w-3 text-primary mr-2" />
