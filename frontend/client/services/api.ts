@@ -80,7 +80,7 @@ class ApiService {
   }
 
   // Helper method to make API requests
-  private async request<T>(
+  public async request<T>(
     endpoint: string,
     options: RequestInit = {},
   ): Promise<ApiResponse<T>> {

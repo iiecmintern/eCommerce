@@ -74,6 +74,7 @@ const productRoutes = require("./routes/api/productRoutes");
 const orderRoutes = require("./routes/api/orderRoutes");
 const storeRoutes = require("./routes/api/storeRoutes");
 const cartRoutes = require("./routes/api/cartRoutes");
+const adminRoutes = require("./routes/admin/adminRoutes");
 
 // API Routes
 app.use("/api/auth", authRoutes);
@@ -82,6 +83,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/stores", storeRoutes);
 app.use("/api/cart", cartRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Test MongoDB connection endpoint
 app.get("/test-db", async (req, res) => {

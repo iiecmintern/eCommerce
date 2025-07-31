@@ -173,10 +173,18 @@ export default function CustomerDashboard() {
         const savedItemsResponse = await apiService.request<SavedItem[]>(
           "/products?wishlist=true",
         );
-        savedItems = savedItemsResponse.data || [];
+        // Ensure we have an array of valid items
+        const items = savedItemsResponse.data || [];
+        savedItems = Array.isArray(items)
+          ? items.filter(
+              (item) =>
+                item && typeof item === "object" && item.id && item.name,
+            )
+          : [];
       } catch (wishlistError) {
         console.warn("Could not fetch wishlist:", wishlistError);
         // Continue with empty wishlist array
+        savedItems = [];
       }
 
       // Calculate stats from orders
@@ -270,6 +278,40 @@ export default function CustomerDashboard() {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  // Define orderStats before early returns
+  const orderStats = data
+    ? [
+        {
+          title: "Total Orders",
+          value: data.stats.totalOrders.toString(),
+          change: data.stats.monthlyChange.orders,
+          icon: <ShoppingBag className="h-5 w-5" />,
+          color: "text-blue-600",
+        },
+        {
+          title: "Total Spent",
+          value: `$${data.stats.totalSpent.toFixed(2)}`,
+          change: data.stats.monthlyChange.spent,
+          icon: <BarChart3 className="h-5 w-5" />,
+          color: "text-green-600",
+        },
+        {
+          title: "Saved Items",
+          value: data.stats.savedItems.toString(),
+          change: data.stats.monthlyChange.savedItems,
+          icon: <Heart className="h-5 w-5" />,
+          color: "text-red-600",
+        },
+        {
+          title: "Loyalty Points",
+          value: data.stats.loyaltyPoints.toString(),
+          change: data.stats.monthlyChange.points,
+          icon: <Award className="h-5 w-5" />,
+          color: "text-purple-600",
+        },
+      ]
+    : [];
 
   // Handle order actions
   const handleOrderAction = async (orderId: string, action: string) => {
@@ -448,37 +490,6 @@ export default function CustomerDashboard() {
       </Layout>
     );
   }
-
-  const orderStats = [
-    {
-      title: "Total Orders",
-      value: data.stats.totalOrders.toString(),
-      change: data.stats.monthlyChange.orders,
-      icon: <ShoppingBag className="h-5 w-5" />,
-      color: "text-blue-600",
-    },
-    {
-      title: "Total Spent",
-      value: `$${data.stats.totalSpent.toFixed(2)}`,
-      change: data.stats.monthlyChange.spent,
-      icon: <BarChart3 className="h-5 w-5" />,
-      color: "text-green-600",
-    },
-    {
-      title: "Saved Items",
-      value: data.stats.savedItems.toString(),
-      change: data.stats.monthlyChange.savedItems,
-      icon: <Heart className="h-5 w-5" />,
-      color: "text-red-600",
-    },
-    {
-      title: "Loyalty Points",
-      value: data.stats.loyaltyPoints.toString(),
-      change: data.stats.monthlyChange.points,
-      icon: <Award className="h-5 w-5" />,
-      color: "text-purple-600",
-    },
-  ];
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -837,90 +848,95 @@ export default function CustomerDashboard() {
               </Card>
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {data.savedItems.map((item) => (
-                  <Card key={item.id} className="overflow-hidden">
-                    <div className="relative">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-48 object-cover"
-                      />
-                      {item.discount && (
-                        <div className="absolute top-2 right-2">
-                          <Badge variant="destructive">
-                            {item.discount}% OFF
-                          </Badge>
-                        </div>
-                      )}
-                      <div className="absolute top-2 left-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="p-1 h-auto"
-                          onClick={() =>
-                            handleSavedItemAction(item.id, "remove")
-                          }
-                        >
-                          <Heart className="h-4 w-4 fill-current text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <CardContent className="p-4">
-                      <h4 className="font-medium mb-2 line-clamp-2">
-                        {item.name}
-                      </h4>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {item.store}
-                      </p>
-
-                      <div className="flex items-center mb-2">
-                        <div className="flex items-center">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-3 w-3 ${i < Math.floor(item.rating) ? "text-yellow-500 fill-current" : "text-gray-300"}`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-sm text-muted-foreground ml-2">
-                          ({item.reviewCount})
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <span className="font-bold">
-                            ${item.price.toFixed(2)}
-                          </span>
-                          {item.originalPrice && (
-                            <span className="text-sm text-muted-foreground line-through ml-2">
-                              ${item.originalPrice.toFixed(2)}
-                            </span>
+                {Array.isArray(data.savedItems) &&
+                  data.savedItems.map((item) =>
+                    item && typeof item === "object" && item.id ? (
+                      <Card key={item.id} className="overflow-hidden">
+                        <div className="relative">
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-full h-48 object-cover"
+                          />
+                          {item.discount && (
+                            <div className="absolute top-2 right-2">
+                              <Badge variant="destructive">
+                                {item.discount}% OFF
+                              </Badge>
+                            </div>
                           )}
+                          <div className="absolute top-2 left-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="p-1 h-auto"
+                              onClick={() =>
+                                handleSavedItemAction(item.id, "remove")
+                              }
+                            >
+                              <Heart className="h-4 w-4 fill-current text-red-500" />
+                            </Button>
+                          </div>
                         </div>
-                        <Badge variant={item.inStock ? "default" : "secondary"}>
-                          {item.inStock ? "In Stock" : "Out of Stock"}
-                        </Badge>
-                      </div>
 
-                      <div className="flex space-x-2">
-                        <Button
-                          className="flex-1"
-                          disabled={!item.inStock}
-                          onClick={() =>
-                            handleSavedItemAction(item.id, "addToCart")
-                          }
-                        >
-                          Add to Cart
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        <CardContent className="p-4">
+                          <h4 className="font-medium mb-2 line-clamp-2">
+                            {item.name}
+                          </h4>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {item.store}
+                          </p>
+
+                          <div className="flex items-center mb-2">
+                            <div className="flex items-center">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-3 w-3 ${i < Math.floor(item.rating) ? "text-yellow-500 fill-current" : "text-gray-300"}`}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-sm text-muted-foreground ml-2">
+                              ({item.reviewCount})
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <span className="font-bold">
+                                ${item.price.toFixed(2)}
+                              </span>
+                              {item.originalPrice && (
+                                <span className="text-sm text-muted-foreground line-through ml-2">
+                                  ${item.originalPrice.toFixed(2)}
+                                </span>
+                              )}
+                            </div>
+                            <Badge
+                              variant={item.inStock ? "default" : "secondary"}
+                            >
+                              {item.inStock ? "In Stock" : "Out of Stock"}
+                            </Badge>
+                          </div>
+
+                          <div className="flex space-x-2">
+                            <Button
+                              className="flex-1"
+                              disabled={!item.inStock}
+                              onClick={() =>
+                                handleSavedItemAction(item.id, "addToCart")
+                              }
+                            >
+                              Add to Cart
+                            </Button>
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ) : null,
+                  )}
               </div>
             )}
           </TabsContent>

@@ -6,7 +6,7 @@ import React, {
   ReactNode,
 } from "react";
 import { useAuth } from "./AuthContext";
-import { ApiService } from "@/services/api";
+import { apiService } from "@/services/api";
 
 interface CartItem {
   id: string;
@@ -74,7 +74,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
       setIsLoading(true);
       try {
-        const response = await ApiService.get("/cart");
+        const response = await apiService.request("/cart");
         if (response.success) {
           setItems(response.data.items || []);
           setCouponCode(response.data.appliedCoupon?.code || null);
@@ -171,10 +171,13 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
 
     try {
-      const response = await ApiService.post("/cart/items", {
-        productId: newItem.id,
-        quantity: 1,
-        variant: null,
+      const response = await apiService.request("/cart/items", {
+        method: "POST",
+        body: JSON.stringify({
+          productId: newItem.id,
+          quantity: 1,
+          variant: null,
+        }),
       });
 
       if (response.success) {
@@ -213,7 +216,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
 
     try {
-      const response = await ApiService.delete(`/cart/items/${itemId}`);
+      const response = await apiService.request(`/cart/items/${itemId}`, {
+        method: "DELETE",
+      });
 
       if (response.success) {
         setItems(response.data.items || []);
@@ -250,8 +255,11 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
 
     try {
-      const response = await ApiService.put(`/cart/items/${itemId}`, {
-        quantity,
+      const response = await apiService.request(`/cart/items/${itemId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          quantity,
+        }),
       });
 
       if (response.success) {
@@ -291,7 +299,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
 
     try {
-      const response = await ApiService.delete("/cart");
+      const response = await apiService.request("/cart", {
+        method: "DELETE",
+      });
 
       if (response.success) {
         setItems([]);
@@ -357,7 +367,10 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
 
     try {
-      const response = await ApiService.post("/cart/coupon", { code });
+      const response = await apiService.request("/cart/coupon", {
+        method: "POST",
+        body: JSON.stringify({ code }),
+      });
 
       if (response.success) {
         setItems(response.data.items || []);
@@ -383,7 +396,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
 
     try {
-      const response = await ApiService.delete("/cart/coupon");
+      const response = await apiService.request("/cart/coupon", {
+        method: "DELETE",
+      });
 
       if (response.success) {
         setItems(response.data.items || []);
