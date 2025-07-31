@@ -122,8 +122,8 @@ export function Header() {
                       alt={user.firstName}
                     />
                     <AvatarFallback className="bg-primary text-primary-foreground">
-                      {user.firstName.charAt(0)}
-                      {user.lastName.charAt(0)}
+                      {user.firstName?.charAt(0) || ""}
+                      {user.lastName?.charAt(0) || ""}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -133,7 +133,7 @@ export function Header() {
                   <Link to="/profile" className="block">
                     <div className="flex flex-col space-y-1 cursor-pointer hover:bg-muted p-2 rounded-md transition-colors">
                       <p className="text-sm font-medium leading-none">
-                        {user.firstName} {user.lastName}
+                        {user.firstName || "User"} {user.lastName || ""}
                       </p>
                       <p className="text-xs leading-none text-muted-foreground">
                         {user.email}

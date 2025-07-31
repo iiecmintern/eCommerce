@@ -714,7 +714,7 @@ export default function VendorDashboard() {
                         <div className="flex items-center space-x-4">
                           <Avatar>
                             <AvatarFallback>
-                              {order.customer.charAt(0)}
+                              {order.customer?.charAt(0) || "C"}
                             </AvatarFallback>
                           </Avatar>
                           <div>
@@ -933,7 +933,7 @@ export default function VendorDashboard() {
                           <div className="flex items-center space-x-2">
                             <Avatar>
                               <AvatarFallback>
-                                {review.customer.charAt(0)}
+                                {review.customer?.charAt(0) || "C"}
                               </AvatarFallback>
                             </Avatar>
                             <div>

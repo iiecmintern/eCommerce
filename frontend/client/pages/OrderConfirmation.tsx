@@ -224,8 +224,8 @@ export default function OrderConfirmation() {
                     <Badge
                       className={getPaymentStatusColor(order.payment.status)}
                     >
-                      {order.payment.status.charAt(0).toUpperCase() +
-                        order.payment.status.slice(1)}
+                      {order.payment.status?.charAt(0)?.toUpperCase() +
+                        order.payment.status?.slice(1) || "Unknown"}
                     </Badge>
                   </div>
                   <div className="flex justify-between">

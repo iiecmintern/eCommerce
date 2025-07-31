@@ -8,8 +8,8 @@ import React, {
 
 interface User {
   id: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   role: "customer" | "vendor" | "admin";
   isEmailVerified: boolean;
@@ -35,8 +35,8 @@ interface AuthContextType {
 }
 
 interface RegisterData {
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   phone?: string;
   company?: string;
@@ -76,8 +76,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const storedUser = localStorage.getItem("user");
 
         if (storedToken && storedUser) {
-          setToken(storedToken);
-          setUser(JSON.parse(storedUser));
+          const parsedUser = JSON.parse(storedUser);
+          // Ensure user object has required properties
+          if (
+            parsedUser &&
+            parsedUser.id &&
+            parsedUser.email &&
+            parsedUser.role
+          ) {
+            setToken(storedToken);
+            setUser(parsedUser);
+          } else {
+            // Invalid user data, clear it
+            localStorage.removeItem("authToken");
+            localStorage.removeItem("user");
+          }
         }
       } catch (error) {
         console.error("Error loading user from localStorage:", error);

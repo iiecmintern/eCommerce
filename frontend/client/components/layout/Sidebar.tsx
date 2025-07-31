@@ -599,10 +599,10 @@ export function Sidebar({
                         title="User"
                       >
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src="" alt={user.firstName} />
+                          <AvatarImage src="" alt={user.firstName || "User"} />
                           <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                            {user.firstName.charAt(0)}
-                            {user.lastName.charAt(0)}
+                            {user.firstName?.charAt(0) || ""}
+                            {user.lastName?.charAt(0) || ""}
                           </AvatarFallback>
                         </Avatar>
                       </Button>
@@ -615,7 +615,7 @@ export function Sidebar({
                       <DropdownMenuLabel className="font-normal">
                         <div className="flex flex-col space-y-1">
                           <p className="text-sm font-medium leading-none">
-                            {user.firstName} {user.lastName}
+                            {user.firstName || "User"} {user.lastName || ""}
                           </p>
                           <p className="text-xs leading-none text-muted-foreground">
                             {user.email}
@@ -662,16 +662,16 @@ export function Sidebar({
                                 ? `http://localhost:5000${user.profilePicture}`
                                 : ""
                             }
-                            alt={user.firstName}
+                            alt={user.firstName || "User"}
                           />
                           <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                            {user.firstName.charAt(0)}
-                            {user.lastName.charAt(0)}
+                            {user.firstName?.charAt(0) || ""}
+                            {user.lastName?.charAt(0) || ""}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 text-left">
                           <div className="text-sm font-medium">
-                            {user.firstName} {user.lastName}
+                            {user.firstName || "User"} {user.lastName || ""}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {getRoleLabel()}
