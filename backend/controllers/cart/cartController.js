@@ -184,8 +184,15 @@ const updateItemQuantity = async (req, res) => {
       });
     }
 
-    // Get cart
-    const cart = await Cart.getOrCreateCart(userId);
+    // Get cart by user ID
+    let cart = await Cart.findOne({ user: userId });
+
+    if (!cart) {
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found",
+      });
+    }
 
     // Check if item exists in cart
     const existingItem = cart.items.find(
@@ -280,7 +287,15 @@ const removeItemFromCart = async (req, res) => {
     const { productId } = req.params;
     const userId = req.user.id;
 
-    const cart = await Cart.getOrCreateCart(userId);
+    // Get cart by user ID
+    let cart = await Cart.findOne({ user: userId });
+
+    if (!cart) {
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found",
+      });
+    }
 
     // Check if item exists in cart
     const existingItem = cart.items.find(
@@ -349,7 +364,16 @@ const removeItemFromCart = async (req, res) => {
 const clearCart = async (req, res) => {
   try {
     const userId = req.user.id;
-    const cart = await Cart.getOrCreateCart(userId);
+
+    // Get cart by user ID
+    let cart = await Cart.findOne({ user: userId });
+
+    if (!cart) {
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found",
+      });
+    }
 
     await cart.clearCart();
 

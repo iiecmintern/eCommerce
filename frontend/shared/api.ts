@@ -40,6 +40,15 @@ export const API_ENDPOINTS = {
   UPDATE_STORE_STATUS: "/stores/status",
   GET_ALL_STORES_FOR_ADMIN: "/stores/admin",
   VERIFY_STORE: "/stores/verify",
+
+  // Orders endpoints
+  ORDERS_MY: "/orders/my",
+  ORDER_BY_ID: (id: string) => `/orders/my/${id}`,
+  CANCEL_ORDER: (id: string) => `/orders/my/${id}/cancel`,
+
+  // Wishlist endpoints
+  ADD_TO_WISHLIST: (productId: string) => `/wishlist/${productId}`,
+  REMOVE_FROM_WISHLIST: (productId: string) => `/wishlist/${productId}`,
 } as const;
 
 // Base API Response

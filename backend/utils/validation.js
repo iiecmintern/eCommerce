@@ -53,8 +53,8 @@ const registerValidation = [
 
   body("role")
     .optional()
-    .isIn(["customer", "vendor"])
-    .withMessage("Role must be either customer or vendor"),
+    .isIn(["customer", "vendor", "admin"])
+    .withMessage("Role must be either customer, vendor, or admin"),
 
   body("agreeToTerms")
     .isBoolean()

@@ -35,9 +35,15 @@ async function testCartAPI() {
         `${BASE_URL}/auth/login`,
         testUser
       );
-      authToken = loginResponse.data.token;
-      userId = loginResponse.data.user._id;
-      console.log("✅ Login successful");
+
+      // Check the response structure
+      if (loginResponse.data.success && loginResponse.data.data) {
+        authToken = loginResponse.data.data.token;
+        userId = loginResponse.data.data.user.id;
+        console.log("✅ Login successful");
+      } else {
+        throw new Error("Login failed: " + JSON.stringify(loginResponse.data));
+      }
     } catch (error) {
       if (error.response?.status === 401) {
         // Try to register if login fails
@@ -47,9 +53,17 @@ async function testCartAPI() {
           testUser
         );
         console.log("Registration response:", registerResponse.data);
-        authToken = registerResponse.data.token;
-        userId = registerResponse.data.user._id;
-        console.log("✅ Registration successful");
+
+        // Check the response structure
+        if (registerResponse.data.success && registerResponse.data.data) {
+          authToken = registerResponse.data.data.token;
+          userId = registerResponse.data.data.user.id;
+          console.log("✅ Registration successful");
+        } else {
+          throw new Error(
+            "Registration failed: " + JSON.stringify(registerResponse.data)
+          );
+        }
       } else {
         throw error;
       }
@@ -64,20 +78,37 @@ async function testCartAPI() {
       },
     });
 
-    // Step 2: Create a test product
-    console.log("\n2. Creating test product...");
-    const productResponse = await api.post("/products", testProduct);
-    const productId = productResponse.data._id;
-    console.log("✅ Test product created:", productId);
+    // Step 2: Get an existing product that's in stock
+    console.log("\n2. Getting existing product...");
+    const productsResponse = await axios.get(`${BASE_URL}/products`);
 
-    // Step 3: Test get cart (should be empty initially)
-    console.log("\n3. Testing get cart...");
+    // Find a product that's in stock
+    const inStockProduct = productsResponse.data.data.find(
+      (product) => product.inStock
+    );
+    if (!inStockProduct) {
+      throw new Error("No products in stock found for testing");
+    }
+
+    const productId = inStockProduct._id;
+    console.log("✅ Using existing product:", productId);
+    console.log("   Product name:", inStockProduct.name);
+    console.log("   Product price:", inStockProduct.price);
+    console.log("   In stock:", inStockProduct.inStock);
+
+    // Step 3: Clear cart first (in case of previous test data)
+    console.log("\n3. Clearing cart first...");
+    await api.delete("/cart");
+    console.log("✅ Cart cleared");
+
+    // Step 4: Test get cart (should be empty initially)
+    console.log("\n4. Testing get cart...");
     const getCartResponse = await api.get("/cart");
     console.log("✅ Cart retrieved:", getCartResponse.data);
     console.log("   Items count:", getCartResponse.data.data.items.length);
 
-    // Step 4: Test add item to cart
-    console.log("\n4. Testing add item to cart...");
+    // Step 5: Test add item to cart
+    console.log("\n5. Testing add item to cart...");
     const addItemResponse = await api.post("/cart/items", {
       productId: productId,
       quantity: 2,
@@ -85,8 +116,8 @@ async function testCartAPI() {
     console.log("✅ Item added to cart:", addItemResponse.data.message);
     console.log("   Total items:", addItemResponse.data.data.totalItems);
 
-    // Step 5: Test get cart again (should have items)
-    console.log("\n5. Testing get cart after adding item...");
+    // Step 6: Test get cart again (should have items)
+    console.log("\n6. Testing get cart after adding item...");
     const getCartResponse2 = await api.get("/cart");
     console.log(
       "✅ Cart retrieved:",
@@ -94,30 +125,38 @@ async function testCartAPI() {
       "items"
     );
     console.log("   Subtotal:", getCartResponse2.data.data.subtotal);
+    console.log(
+      "   Cart items:",
+      getCartResponse2.data.data.items.map((item) => ({
+        productId: item.id,
+        quantity: item.quantity,
+      }))
+    );
 
-    // Step 6: Test update item quantity
-    console.log("\n6. Testing update item quantity...");
+    // Step 7: Test update item quantity
+    console.log("\n7. Testing update item quantity...");
+    console.log("   Updating product:", productId);
     const updateResponse = await api.put(`/cart/items/${productId}`, {
       quantity: 3,
     });
     console.log("✅ Item quantity updated:", updateResponse.data.message);
     console.log("   New total items:", updateResponse.data.data.totalItems);
 
-    // Step 7: Test apply coupon
-    console.log("\n7. Testing apply coupon...");
+    // Step 8: Test apply coupon
+    console.log("\n8. Testing apply coupon...");
     const couponResponse = await api.post("/cart/coupon", {
       code: "SAVE10",
     });
     console.log("✅ Coupon applied:", couponResponse.data.message);
     console.log("   Total discount:", couponResponse.data.data.totalDiscount);
 
-    // Step 8: Test remove coupon
-    console.log("\n8. Testing remove coupon...");
+    // Step 9: Test remove coupon
+    console.log("\n9. Testing remove coupon...");
     const removeCouponResponse = await api.delete("/cart/coupon");
     console.log("✅ Coupon removed:", removeCouponResponse.data.message);
 
-    // Step 9: Test remove item from cart
-    console.log("\n9. Testing remove item from cart...");
+    // Step 10: Test remove item from cart
+    console.log("\n10. Testing remove item from cart...");
     const removeItemResponse = await api.delete(`/cart/items/${productId}`);
     console.log("✅ Item removed from cart:", removeItemResponse.data.message);
     console.log(
@@ -125,13 +164,13 @@ async function testCartAPI() {
       removeItemResponse.data.data.items.length
     );
 
-    // Step 10: Test clear cart
-    console.log("\n10. Testing clear cart...");
+    // Step 11: Test clear cart
+    console.log("\n11. Testing clear cart...");
     const clearCartResponse = await api.delete("/cart");
     console.log("✅ Cart cleared:", clearCartResponse.data.message);
 
-    // Step 11: Verify cart is empty
-    console.log("\n11. Verifying cart is empty...");
+    // Step 12: Verify cart is empty
+    console.log("\n12. Verifying cart is empty...");
     const finalCartResponse = await api.get("/cart");
     console.log(
       "✅ Final cart state:",

@@ -172,7 +172,7 @@ const login = async (req, res) => {
     // Check if password is correct
     let isPasswordCorrect;
     try {
-      isPasswordCorrect = await user.comparePassword(password);
+      isPasswordCorrect = await user.correctPassword(password, user.password);
     } catch (error) {
       console.error("Error comparing password:", error);
       return res.status(500).json({

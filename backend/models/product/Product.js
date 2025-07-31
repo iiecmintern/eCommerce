@@ -293,6 +293,12 @@ productSchema.virtual("stockStatus").get(function () {
   return "in_stock";
 });
 
+// Virtual for inStock boolean
+productSchema.virtual("inStock").get(function () {
+  if (!this.trackInventory) return true;
+  return this.stockQuantity > 0;
+});
+
 // Indexes for better query performance
 productSchema.index({ name: "text", description: "text", tags: "text" });
 productSchema.index({ vendor: 1, status: 1 });

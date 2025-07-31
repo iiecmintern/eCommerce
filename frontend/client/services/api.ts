@@ -583,6 +583,102 @@ class ApiService {
     }
   }
 
+  // Orders API Methods
+  async getMyOrders(
+    params?: PaginationParams,
+  ): Promise<PaginatedResponse<Order>> {
+    try {
+      const searchParams = new URLSearchParams();
+
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            searchParams.append(key, value.toString());
+          }
+        });
+      }
+
+      const queryString = searchParams.toString();
+      const endpoint = queryString
+        ? `${API_ENDPOINTS.ORDERS_MY}?${queryString}`
+        : API_ENDPOINTS.ORDERS_MY;
+
+      return await this.request<PaginatedResponse<Order>>(endpoint);
+    } catch (error) {
+      console.error("Get my orders API error:", error);
+      throw error;
+    }
+  }
+
+  async getOrder(id: string): Promise<ApiResponse<Order>> {
+    try {
+      return await this.request<Order>(API_ENDPOINTS.ORDER_BY_ID(id));
+    } catch (error) {
+      console.error("Get order API error:", error);
+      throw error;
+    }
+  }
+
+  async cancelOrder(id: string, reason?: string): Promise<ApiResponse> {
+    try {
+      return await this.request(API_ENDPOINTS.CANCEL_ORDER(id), {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      });
+    } catch (error) {
+      console.error("Cancel order API error:", error);
+      throw error;
+    }
+  }
+
+  // Wishlist API Methods
+  async getWishlist(
+    params?: PaginationParams,
+  ): Promise<PaginatedResponse<Product>> {
+    try {
+      const searchParams = new URLSearchParams();
+      searchParams.append("wishlist", "true");
+
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            searchParams.append(key, value.toString());
+          }
+        });
+      }
+
+      const queryString = searchParams.toString();
+      const endpoint = `${API_ENDPOINTS.PRODUCTS}?${queryString}`;
+
+      return await this.request<PaginatedResponse<Product>>(endpoint);
+    } catch (error) {
+      console.error("Get wishlist API error:", error);
+      throw error;
+    }
+  }
+
+  async addToWishlist(productId: string): Promise<ApiResponse> {
+    try {
+      return await this.request(API_ENDPOINTS.ADD_TO_WISHLIST(productId), {
+        method: "POST",
+      });
+    } catch (error) {
+      console.error("Add to wishlist API error:", error);
+      throw error;
+    }
+  }
+
+  async removeFromWishlist(productId: string): Promise<ApiResponse> {
+    try {
+      return await this.request(API_ENDPOINTS.REMOVE_FROM_WISHLIST(productId), {
+        method: "DELETE",
+      });
+    } catch (error) {
+      console.error("Remove from wishlist API error:", error);
+      throw error;
+    }
+  }
+
   // Utility Methods
   isAuthenticated(): boolean {
     try {
