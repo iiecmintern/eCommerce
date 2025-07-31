@@ -99,69 +99,62 @@ export function Sidebar({
     }>
   >([]);
 
-  // Load dynamic categories from all vendor products
+  // Load dynamic categories from API
   useEffect(() => {
-    const loadCategories = () => {
+    const loadCategories = async () => {
       try {
-        // Get all vendor products from localStorage
-        const allProducts: any[] = [];
-
-        // In a real app, you would fetch from API
-        // For now, we'll use localStorage data
-        const savedProducts = localStorage.getItem("vendor_products");
-        if (savedProducts) {
-          const parsedProducts = JSON.parse(savedProducts);
-          allProducts.push(...parsedProducts);
-        }
-
-        // Count products by category
-        const categoryCounts: { [key: string]: number } = {};
-        allProducts.forEach((product) => {
-          if (product.category && product.isActive) {
-            categoryCounts[product.category] =
-              (categoryCounts[product.category] || 0) + 1;
-          }
-        });
-
-        // Create category items with icons
-        const categories = Object.entries(categoryCounts).map(
-          ([category, count]) => ({
-            name: category,
-            count,
-            icon: getCategoryIcon(category),
-          }),
+        // Fetch categories from API
+        const categoriesResponse = await fetch(
+          "http://localhost:5000/api/products/categories",
         );
 
-        // Sort by count (most popular first)
-        categories.sort((a, b) => b.count - a.count);
+        if (categoriesResponse.ok) {
+          const categoriesData = await categoriesResponse.json();
+          const categoryNames = categoriesData.data || [];
 
-        setDynamicCategories(categories);
+          // Fetch products to get category counts
+          const productsResponse = await fetch(
+            "http://localhost:5000/api/products",
+          );
+
+          if (productsResponse.ok) {
+            const productsData = await productsResponse.json();
+            const products = productsData.data || [];
+
+            // Count products by category
+            const categoryCounts: { [key: string]: number } = {};
+            products.forEach((product: any) => {
+              if (product.category && product.status === "active") {
+                categoryCounts[product.category] =
+                  (categoryCounts[product.category] || 0) + 1;
+              }
+            });
+
+            // Create category items with icons
+            const categories = categoryNames.map((categoryName: string) => ({
+              name: categoryName,
+              count: categoryCounts[categoryName] || 0,
+              icon: getCategoryIcon(categoryName),
+            }));
+
+            // Sort by count (most popular first)
+            categories.sort((a, b) => b.count - a.count);
+
+            setDynamicCategories(categories);
+          } else {
+            console.error("Failed to fetch products for category counts");
+          }
+        } else {
+          console.error("Failed to fetch categories");
+        }
       } catch (error) {
         console.error("Error loading categories:", error);
+        // Fallback to empty categories
+        setDynamicCategories([]);
       }
     };
 
     loadCategories();
-
-    // Listen for localStorage changes to update categories in real-time
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "vendor_products") {
-        loadCategories();
-      }
-    };
-
-    // Listen for custom events when products are updated
-    const handleProductUpdate = () => {
-      loadCategories();
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("productUpdated", handleProductUpdate);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("productUpdated", handleProductUpdate);
-    };
   }, []);
 
   // Function to get appropriate icon for each category
@@ -250,7 +243,7 @@ export function Sidebar({
         { href: "/", label: "Home", icon: <Home className="h-4 w-4" /> },
         // Dynamic categories from vendor products
         ...dynamicCategories.map((category) => ({
-          href: `/category/${category.name.toLowerCase().replace(/\s+/g, "-")}`,
+          href: `/category/${category.name.toLowerCase().replace(/\s+/g, "-").replace(/&/g, "and")}`,
           label: `${category.name} (${category.count})`,
           icon: category.icon,
         })),

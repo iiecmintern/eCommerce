@@ -170,16 +170,32 @@ export default function CustomerDashboard() {
 
       // Fetch saved items (wishlist) - using products API with wishlist filter
       try {
-        const savedItemsResponse = await apiService.request<SavedItem[]>(
-          "/products?wishlist=true",
-        );
-        // Ensure we have an array of valid items
-        const items = savedItemsResponse.data || [];
+        const savedItemsResponse = await apiService.request<{
+          data: SavedItem[];
+          pagination: any;
+        }>("/products?wishlist=true");
+        // Ensure we have an array of valid items from the nested data structure
+        const items = savedItemsResponse.data?.data || [];
         savedItems = Array.isArray(items)
-          ? items.filter(
-              (item) =>
-                item && typeof item === "object" && item.id && item.name,
-            )
+          ? items
+              .filter(
+                (item) =>
+                  item && typeof item === "object" && item.id && item.name,
+              )
+              .map((item) => ({
+                id: item.id,
+                name: item.name,
+                price: item.finalPrice || item.price,
+                originalPrice: item.compareAtPrice || item.price,
+                discount: item.discountPercentage,
+                store: item.store?.name || "Unknown Store",
+                rating: item.averageRating || 0,
+                reviewCount: item.totalReviews || 0,
+                image:
+                  item.images?.[0]?.url ||
+                  "https://via.placeholder.com/400x400?text=No+Image",
+                inStock: item.inStock || item.stockStatus === "in_stock",
+              }))
           : [];
       } catch (wishlistError) {
         console.warn("Could not fetch wishlist:", wishlistError);
@@ -818,7 +834,10 @@ export default function CustomerDashboard() {
                     onClick={() => {
                       // Share wishlist functionality
                       const wishlistText = data.savedItems
-                        .map((item) => `${item.name} - $${item.price}`)
+                        .map(
+                          (item) =>
+                            `${item.name} - ${formatCurrency(item.price)}`,
+                        )
                         .join("\n");
 
                       if (navigator.share) {

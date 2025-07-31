@@ -41,17 +41,23 @@ export default function CategoryPage() {
       banner:
         "https://images.pexels.com/photos/33175230/pexels-photo-33175230.jpeg",
     },
-    "home-&-kitchen": {
+    "home-and-kitchen": {
       title: "Home & Kitchen",
       description: "Everything for your home",
       banner:
         "https://images.pexels.com/photos/2724749/pexels-photo-2724749.jpeg",
     },
-    "sports-&-outdoors": {
+    "sports-and-outdoors": {
       title: "Sports & Outdoors",
       description: "Fitness equipment and outdoor gear",
       banner:
         "https://images.pexels.com/photos/4164761/pexels-photo-4164761.jpeg",
+    },
+    "health-and-beauty": {
+      title: "Health & Beauty",
+      description: "Health and beauty products",
+      banner:
+        "https://images.pexels.com/photos/3785147/pexels-photo-3785147.jpeg",
     },
     books: {
       title: "Books",
@@ -162,9 +168,6 @@ export default function CategoryPage() {
         setIsLoading(true);
         setError(null);
 
-        // Simulate API call delay
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
         // Set category info
         const currentCategory = category || "electronics";
         const info = categoryData[currentCategory];
@@ -174,7 +177,51 @@ export default function CategoryPage() {
         }
 
         setCategoryInfo(info);
-        setProducts(mockProducts);
+
+        // Fetch real products for this category
+        try {
+          const response = await fetch(
+            `http://localhost:5000/api/products?category=${encodeURIComponent(info.title)}`,
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            const categoryProducts = data.data || [];
+
+            // Transform products to match the expected format
+            const formattedProducts = categoryProducts.map((product: any) => ({
+              id: product.id || product._id,
+              name: product.name,
+              price: `₹${product.finalPrice || product.price}`,
+              originalPrice: product.compareAtPrice
+                ? `₹${product.compareAtPrice}`
+                : undefined,
+              discount: product.discountPercentage
+                ? `${product.discountPercentage}% off`
+                : undefined,
+              rating: product.averageRating || 0,
+              reviews: product.totalReviews || 0,
+              image:
+                product.images?.[0]?.url ||
+                "https://via.placeholder.com/400x400?text=No+Image",
+              badge: product.isFeatured
+                ? "Featured"
+                : product.isBestSeller
+                  ? "Best Seller"
+                  : undefined,
+              inStock: product.inStock || product.stockStatus === "in_stock",
+              freeDelivery: true, // Default to true for now
+            }));
+
+            setProducts(formattedProducts);
+          } else {
+            console.warn("Failed to fetch category products, using mock data");
+            setProducts(mockProducts);
+          }
+        } catch (apiError) {
+          console.warn("API error, using mock data:", apiError);
+          setProducts(mockProducts);
+        }
       } catch (error) {
         console.error("Error loading category data:", error);
         setError(
