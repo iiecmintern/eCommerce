@@ -841,30 +841,349 @@ const updateProductStock = async (req, res) => {
 // @access  Public
 const getCategories = async (req, res) => {
   try {
-    let categories;
-    try {
-      categories = await Product.distinct("category", {
-        status: "active",
-        isPublished: true,
-      });
-    } catch (error) {
-      console.error("Error fetching product categories:", error);
-      return res.status(500).json({
-        success: false,
-        message: "Error fetching product categories",
-      });
-    }
+    const categories = await Product.distinct("category", {
+      status: "active",
+      isPublished: true,
+    });
 
     res.json({
       success: true,
       data: categories,
     });
   } catch (error) {
-    console.error("Error fetching product categories:", error);
+    console.error("Error fetching categories:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error while fetching product categories",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message: "Error fetching categories",
+    });
+  }
+};
+
+// ===== VARIANT MANAGEMENT ENDPOINTS =====
+
+// @desc    Get product variants
+// @route   GET /api/products/:id/variants
+// @access  Public
+const getProductVariants = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const product = await Product.findById(id)
+      .populate("vendor", "firstName lastName company")
+      .populate("store", "name");
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        product: {
+          id: product._id,
+          name: product.name,
+          price: product.price,
+          compareAtPrice: product.compareAtPrice,
+          hasVariants: product.hasVariants,
+          variantTypes: product.variantTypes,
+          variantOptions: product.variantOptions,
+          variantPriceRange: product.variantPriceRange,
+        },
+        variants: product.availableVariants,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching product variants:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching product variants",
+    });
+  }
+};
+
+// @desc    Add variant to product
+// @route   POST /api/products/:id/variants
+// @access  Private (Vendor)
+const addProductVariant = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const variantData = req.body;
+
+    const product = await Product.findById(id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    // Check if vendor owns this product
+    if (product.vendor.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to modify this product",
+      });
+    }
+
+    // Validate variant data
+    if (!variantData.options || !Array.isArray(variantData.options)) {
+      return res.status(400).json({
+        success: false,
+        message: "Variant options are required",
+      });
+    }
+
+    // Check if variant already exists
+    const combination = variantData.options.map((opt) => opt.value).join("-");
+    const existingVariant = product.findVariant(combination);
+    if (existingVariant) {
+      return res.status(400).json({
+        success: false,
+        message: "Variant combination already exists",
+      });
+    }
+
+    // Add variant
+    await product.addVariant(variantData);
+
+    // Populate and return updated product
+    await product.populate("vendor", "firstName lastName company");
+    await product.populate("store", "name");
+
+    res.status(201).json({
+      success: true,
+      message: "Variant added successfully",
+      data: product,
+    });
+  } catch (error) {
+    console.error("Error adding product variant:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error adding product variant",
+    });
+  }
+};
+
+// @desc    Update product variant
+// @route   PUT /api/products/:id/variants/:combination
+// @access  Private (Vendor)
+const updateProductVariant = async (req, res) => {
+  try {
+    const { id, combination } = req.params;
+    const updateData = req.body;
+
+    const product = await Product.findById(id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    // Check if vendor owns this product
+    if (product.vendor.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to modify this product",
+      });
+    }
+
+    // Check if variant exists
+    const existingVariant = product.findVariant(combination);
+    if (!existingVariant) {
+      return res.status(404).json({
+        success: false,
+        message: "Variant not found",
+      });
+    }
+
+    // Update variant
+    await product.updateVariant(combination, updateData);
+
+    // Populate and return updated product
+    await product.populate("vendor", "firstName lastName company");
+    await product.populate("store", "name");
+
+    res.json({
+      success: true,
+      message: "Variant updated successfully",
+      data: product,
+    });
+  } catch (error) {
+    console.error("Error updating product variant:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating product variant",
+    });
+  }
+};
+
+// @desc    Delete product variant
+// @route   DELETE /api/products/:id/variants/:combination
+// @access  Private (Vendor)
+const deleteProductVariant = async (req, res) => {
+  try {
+    const { id, combination } = req.params;
+
+    const product = await Product.findById(id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    // Check if vendor owns this product
+    if (product.vendor.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to modify this product",
+      });
+    }
+
+    // Check if variant exists
+    const existingVariant = product.findVariant(combination);
+    if (!existingVariant) {
+      return res.status(404).json({
+        success: false,
+        message: "Variant not found",
+      });
+    }
+
+    // Remove variant
+    await product.removeVariant(combination);
+
+    // Populate and return updated product
+    await product.populate("vendor", "firstName lastName company");
+    await product.populate("store", "name");
+
+    res.json({
+      success: true,
+      message: "Variant deleted successfully",
+      data: product,
+    });
+  } catch (error) {
+    console.error("Error deleting product variant:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error deleting product variant",
+    });
+  }
+};
+
+// @desc    Update variant stock
+// @route   PATCH /api/products/:id/variants/:combination/stock
+// @access  Private (Vendor)
+const updateVariantStock = async (req, res) => {
+  try {
+    const { id, combination } = req.params;
+    const { quantity, operation = "decrease" } = req.body;
+
+    if (!quantity || typeof quantity !== "number" || quantity <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid quantity is required",
+      });
+    }
+
+    const product = await Product.findById(id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    // Check if vendor owns this product
+    if (product.vendor.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to modify this product",
+      });
+    }
+
+    // Update variant stock
+    await product.updateVariantStock(combination, quantity, operation);
+
+    // Populate and return updated product
+    await product.populate("vendor", "firstName lastName company");
+    await product.populate("store", "name");
+
+    res.json({
+      success: true,
+      message: "Variant stock updated successfully",
+      data: product,
+    });
+  } catch (error) {
+    console.error("Error updating variant stock:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error updating variant stock",
+    });
+  }
+};
+
+// @desc    Bulk update variants
+// @route   PUT /api/products/:id/variants/bulk
+// @access  Private (Vendor)
+const bulkUpdateVariants = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { variants } = req.body;
+
+    if (!variants || !Array.isArray(variants)) {
+      return res.status(400).json({
+        success: false,
+        message: "Variants array is required",
+      });
+    }
+
+    const product = await Product.findById(id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    // Check if vendor owns this product
+    if (product.vendor.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to modify this product",
+      });
+    }
+
+    // Update variants
+    for (const variantData of variants) {
+      const { combination, ...updateData } = variantData;
+      if (combination) {
+        await product.updateVariant(combination, updateData);
+      }
+    }
+
+    // Populate and return updated product
+    await product.populate("vendor", "firstName lastName company");
+    await product.populate("store", "name");
+
+    res.json({
+      success: true,
+      message: "Variants updated successfully",
+      data: product,
+    });
+  } catch (error) {
+    console.error("Error bulk updating variants:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating variants",
     });
   }
 };
@@ -882,4 +1201,11 @@ module.exports = {
   updateProductStatus,
   updateProductStock,
   getCategories,
+  // Variant management
+  getProductVariants,
+  addProductVariant,
+  updateProductVariant,
+  deleteProductVariant,
+  updateVariantStock,
+  bulkUpdateVariants,
 };

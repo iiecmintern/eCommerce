@@ -124,26 +124,126 @@ const productSchema = new mongoose.Schema(
       default: false,
     },
 
-    // Product Variants
+    // Product Variants - Enhanced Structure
     variants: [
       {
-        name: {
+        // Variant combination (e.g., "Red-Large-Cotton")
+        combination: {
           type: String,
           required: true,
+          trim: true,
         },
-        value: {
-          type: String,
-          required: true,
+        // Individual variant options
+        options: [
+          {
+            type: {
+              type: String,
+              required: true,
+              enum: ["color", "size", "material", "storage", "style", "other"],
+            },
+            name: {
+              type: String,
+              required: true,
+              trim: true,
+            },
+            value: {
+              type: String,
+              required: true,
+              trim: true,
+            },
+            // For color variants, store hex code
+            hexCode: String,
+            // For size variants, store measurements
+            measurements: {
+              length: Number,
+              width: Number,
+              height: Number,
+              weight: Number,
+            },
+          },
+        ],
+        // Variant-specific pricing
+        price: {
+          type: Number,
+          min: [0, "Variant price cannot be negative"],
         },
-        price: Number,
+        compareAtPrice: {
+          type: Number,
+          min: [0, "Variant compare price cannot be negative"],
+        },
+        costPrice: {
+          type: Number,
+          min: [0, "Variant cost price cannot be negative"],
+        },
+        // Variant-specific inventory
         stockQuantity: {
           type: Number,
           default: 0,
-          min: 0,
+          min: [0, "Stock quantity cannot be negative"],
         },
-        sku: String,
+        lowStockThreshold: {
+          type: Number,
+          default: 5,
+          min: [0, "Low stock threshold cannot be negative"],
+        },
+        // Variant-specific SKU
+        sku: {
+          type: String,
+          trim: true,
+        },
+        // Variant-specific images
+        images: [
+          {
+            url: {
+              type: String,
+              required: true,
+            },
+            alt: String,
+            isPrimary: {
+              type: Boolean,
+              default: false,
+            },
+            order: {
+              type: Number,
+              default: 0,
+            },
+          },
+        ],
+        // Variant availability
+        isActive: {
+          type: Boolean,
+          default: true,
+        },
+        // Variant-specific weight and dimensions
+        weight: {
+          type: Number,
+          min: [0, "Weight cannot be negative"],
+        },
+        dimensions: {
+          length: Number,
+          width: Number,
+          height: Number,
+        },
       },
     ],
+
+    // Variant configuration
+    variantConfig: {
+      // Available variant types for this product
+      types: [
+        {
+          type: String,
+          enum: ["color", "size", "material", "storage", "style", "other"],
+        },
+      ],
+      // Whether variants are required for purchase
+      required: {
+        type: Boolean,
+        default: false,
+      },
+      // Default variant (if any)
+      defaultVariant: String,
+    },
 
     // Images and Media
     images: [
@@ -299,6 +399,75 @@ productSchema.virtual("inStock").get(function () {
   return this.stockQuantity > 0;
 });
 
+// Enhanced virtuals for variant management
+productSchema.virtual("hasVariants").get(function () {
+  return this.variants && this.variants.length > 0;
+});
+
+productSchema.virtual("availableVariants").get(function () {
+  if (!this.variants) return [];
+  return this.variants.filter((variant) => variant.isActive !== false);
+});
+
+productSchema.virtual("variantTypes").get(function () {
+  if (!this.variantConfig?.types) return [];
+  return this.variantConfig.types;
+});
+
+productSchema.virtual("variantOptions").get(function () {
+  if (!this.variants) return {};
+
+  const options = {};
+  this.variants.forEach((variant) => {
+    variant.options.forEach((option) => {
+      if (!options[option.type]) {
+        options[option.type] = new Set();
+      }
+      options[option.type].add(option.value);
+    });
+  });
+
+  // Convert Sets to Arrays
+  Object.keys(options).forEach((key) => {
+    options[key] = Array.from(options[key]);
+  });
+
+  return options;
+});
+
+productSchema.virtual("minVariantPrice").get(function () {
+  if (!this.variants || this.variants.length === 0) {
+    return this.price;
+  }
+
+  const activeVariants = this.variants.filter((v) => v.isActive !== false);
+  if (activeVariants.length === 0) return this.price;
+
+  return Math.min(...activeVariants.map((v) => v.price || this.price));
+});
+
+productSchema.virtual("maxVariantPrice").get(function () {
+  if (!this.variants || this.variants.length === 0) {
+    return this.price;
+  }
+
+  const activeVariants = this.variants.filter((v) => v.isActive !== false);
+  if (activeVariants.length === 0) return this.price;
+
+  return Math.max(...activeVariants.map((v) => v.price || this.price));
+});
+
+productSchema.virtual("variantPriceRange").get(function () {
+  const min = this.minVariantPrice;
+  const max = this.maxVariantPrice;
+
+  if (min === max) {
+    return `₹${min.toLocaleString()}`;
+  }
+
+  return `₹${min.toLocaleString()} - ₹${max.toLocaleString()}`;
+});
+
 // Indexes for better query performance
 productSchema.index({ name: "text", description: "text", tags: "text" });
 productSchema.index({ vendor: 1, status: 1 });
@@ -372,6 +541,138 @@ productSchema.methods.getFinalPrice = function () {
     return this.price;
   }
   return this.price + (this.price * this.gstRate) / 100;
+};
+
+// Enhanced instance methods for variant management
+productSchema.methods.findVariant = function (combination) {
+  if (!this.variants) return null;
+  return this.variants.find((v) => v.combination === combination);
+};
+
+productSchema.methods.findVariantByOptions = function (options) {
+  if (!this.variants) return null;
+
+  return this.variants.find((variant) => {
+    return variant.options.every((option) => {
+      const matchingOption = options.find(
+        (opt) => opt.type === option.type && opt.value === option.value
+      );
+      return matchingOption !== undefined;
+    });
+  });
+};
+
+productSchema.methods.updateVariantStock = function (
+  combination,
+  quantity,
+  operation = "decrease"
+) {
+  const variant = this.findVariant(combination);
+  if (!variant) {
+    throw new Error("Variant not found");
+  }
+
+  if (operation === "decrease") {
+    if (variant.stockQuantity < quantity && !this.allowBackorders) {
+      throw new Error("Insufficient stock for variant");
+    }
+    variant.stockQuantity = Math.max(0, variant.stockQuantity - quantity);
+  } else if (operation === "increase") {
+    variant.stockQuantity += quantity;
+  }
+
+  return this.save();
+};
+
+productSchema.methods.getVariantPrice = function (combination) {
+  const variant = this.findVariant(combination);
+  if (!variant) return this.price;
+  return variant.price || this.price;
+};
+
+productSchema.methods.getVariantStockStatus = function (combination) {
+  const variant = this.findVariant(combination);
+  if (!variant) return "out_of_stock";
+
+  if (variant.stockQuantity <= 0) return "out_of_stock";
+  if (variant.stockQuantity <= variant.lowStockThreshold) return "low_stock";
+  return "in_stock";
+};
+
+productSchema.methods.generateVariantCombinations = function (variantTypes) {
+  if (!variantTypes || variantTypes.length === 0) return [];
+
+  const options = this.variantOptions;
+  const combinations = [];
+
+  // Generate all possible combinations
+  const generateCombos = (currentCombo, typeIndex) => {
+    if (typeIndex === variantTypes.length) {
+      combinations.push([...currentCombo]);
+      return;
+    }
+
+    const currentType = variantTypes[typeIndex];
+    const typeOptions = options[currentType] || [];
+
+    typeOptions.forEach((option) => {
+      currentCombo.push({ type: currentType, value: option });
+      generateCombos(currentCombo, typeIndex + 1);
+      currentCombo.pop();
+    });
+  };
+
+  generateCombos([], 0);
+  return combinations;
+};
+
+productSchema.methods.addVariant = function (variantData) {
+  if (!this.variants) {
+    this.variants = [];
+  }
+
+  // Generate combination string
+  const combination = variantData.options.map((opt) => opt.value).join("-");
+
+  const newVariant = {
+    combination,
+    options: variantData.options,
+    price: variantData.price || this.price,
+    compareAtPrice: variantData.compareAtPrice,
+    costPrice: variantData.costPrice,
+    stockQuantity: variantData.stockQuantity || 0,
+    lowStockThreshold: variantData.lowStockThreshold || 5,
+    sku: variantData.sku,
+    images: variantData.images || [],
+    isActive: variantData.isActive !== false,
+    weight: variantData.weight,
+    dimensions: variantData.dimensions,
+  };
+
+  this.variants.push(newVariant);
+  return this.save();
+};
+
+productSchema.methods.updateVariant = function (combination, updateData) {
+  const variant = this.findVariant(combination);
+  if (!variant) {
+    throw new Error("Variant not found");
+  }
+
+  Object.assign(variant, updateData);
+  return this.save();
+};
+
+productSchema.methods.removeVariant = function (combination) {
+  const variantIndex = this.variants.findIndex(
+    (v) => v.combination === combination
+  );
+  if (variantIndex === -1) {
+    throw new Error("Variant not found");
+  }
+
+  this.variants.splice(variantIndex, 1);
+  return this.save();
 };
 
 module.exports = mongoose.model("Product", productSchema);

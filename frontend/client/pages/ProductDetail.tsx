@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/contexts/CartContext";
+import { VariantSelector } from "@/components/VariantSelector";
+import { apiService } from "@/services/api";
 import {
   Star,
   Heart,
@@ -19,115 +21,211 @@ import {
   Check,
   MapPin,
   Clock,
+  Loader2,
 } from "lucide-react";
+
+interface VariantOption {
+  type: string;
+  name: string;
+  value: string;
+  hexCode?: string;
+  measurements?: {
+    length?: number;
+    width?: number;
+    height?: number;
+    weight?: number;
+  };
+}
+
+interface Variant {
+  combination: string;
+  options: VariantOption[];
+  price: number;
+  compareAtPrice?: number;
+  stockQuantity: number;
+  isActive: boolean;
+  images?: Array<{
+    url: string;
+    alt: string;
+    isPrimary: boolean;
+  }>;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  compareAtPrice?: number;
+  description: string;
+  images: Array<{
+    url: string;
+    alt: string;
+    isPrimary: boolean;
+  }>;
+  hasVariants: boolean;
+  variantTypes: string[];
+  variantOptions: Record<string, string[]>;
+  variants: Variant[];
+  vendor: {
+    firstName: string;
+    lastName: string;
+    company?: string;
+  };
+  store: {
+    name: string;
+  };
+  averageRating: number;
+  totalReviews: number;
+  stockQuantity: number;
+  inStock: boolean;
+  specifications: Array<{
+    name: string;
+    value: string;
+  }>;
+}
 
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { addToCart, isInCart, getItemQuantity } = useCart();
+
+  const [product, setProduct] = useState<Product | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [selectedVariant, setSelectedVariant] = useState("256GB");
+  const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock product data
-  const product = {
-    id: "1",
-    name: "Samsung Galaxy S24 Ultra",
-    price: 124999,
-    originalPrice: 149999,
-    discount: "17% off",
-    rating: 4.5,
-    reviews: 2847,
-    images: [
-      "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
-      "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
-      "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
-      "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
-    ],
-    badge: "Best Seller",
-    inStock: true,
-    description:
-      "Experience the pinnacle of smartphone innovation with the Samsung Galaxy S24 Ultra. Featuring an advanced camera system, powerful performance, and stunning display.",
-    features: [
-      "6.8-inch Dynamic AMOLED 2X Display",
-      "200MP + 50MP + 12MP + 10MP Camera System",
-      "Snapdragon 8 Gen 3 Processor",
-      "5000mAh Battery with 45W Fast Charging",
-      "S Pen Included",
-      "IP68 Water Resistance",
-    ],
-    specifications: {
-      Display: "6.8-inch Dynamic AMOLED 2X, 3120 x 1440 pixels",
-      Processor: "Snapdragon 8 Gen 3",
-      RAM: "12GB",
-      Storage: "256GB/512GB/1TB",
-      Camera: "200MP Main, 50MP Telephoto, 12MP Ultra-wide, 10MP Front",
-      Battery: "5000mAh",
-      OS: "Android 14 with One UI 6.1",
-    },
-    variants: ["256GB", "512GB", "1TB"],
-    colors: [
-      "Titanium Black",
-      "Titanium Gray",
-      "Titanium Violet",
-      "Titanium Yellow",
-    ],
-    seller: "Samsung Official Store",
-    warranty: "1 Year Manufacturer Warranty",
-    deliveryInfo: {
-      freeDelivery: true,
-      estimatedDays: "2-3",
-      codAvailable: true,
-    },
+  // Fetch product data
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!id) return;
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await apiService.request(`/products/${id}/variants`);
+
+        if (response.success) {
+          const productData = response.data.product;
+          const variants = response.data.variants;
+
+          // Set default variant if available
+          const defaultVariant =
+            variants.find((v) => v.isActive)?.combination || null;
+
+          setProduct({
+            ...productData,
+            variants,
+            id: productData.id,
+          });
+          setSelectedVariant(defaultVariant);
+        } else {
+          setError("Failed to load product");
+        }
+      } catch (err) {
+        console.error("Error fetching product:", err);
+        setError("Failed to load product");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [id]);
+
+  // Get current variant data
+  const currentVariant = product?.variants.find(
+    (v) => v.combination === selectedVariant,
+  );
+  const currentPrice = currentVariant?.price || product?.price || 0;
+  const currentComparePrice =
+    currentVariant?.compareAtPrice || product?.compareAtPrice;
+  const currentStock =
+    currentVariant?.stockQuantity || product?.stockQuantity || 0;
+  const currentImages = currentVariant?.images || product?.images || [];
+  const isInStock = currentStock > 0;
+
+  // Calculate discount percentage
+  const discountPercentage =
+    currentComparePrice && currentComparePrice > currentPrice
+      ? Math.round(
+          ((currentComparePrice - currentPrice) / currentComparePrice) * 100,
+        )
+      : 0;
+
+  // Handle variant change
+  const handleVariantChange = (combination: string) => {
+    setSelectedVariant(combination);
+    setSelectedImage(0); // Reset to first image when variant changes
   };
 
-  const reviews = [
-    {
-      id: 1,
-      user: "Rahul S.",
-      rating: 5,
-      date: "2 days ago",
-      comment:
-        "Excellent phone! Camera quality is outstanding and performance is smooth.",
-      verified: true,
-    },
-    {
-      id: 2,
-      user: "Priya M.",
-      rating: 4,
-      date: "1 week ago",
-      comment: "Good build quality and features. Battery life could be better.",
-      verified: true,
-    },
-    {
-      id: 3,
-      user: "Amit K.",
-      rating: 5,
-      date: "2 weeks ago",
-      comment: "Best smartphone I've used! The S Pen is really useful.",
-      verified: true,
-    },
-  ];
+  // Handle add to cart
+  const handleAddToCart = () => {
+    if (!product || !isInStock) return;
 
-  const relatedProducts = [
-    {
-      id: 2,
-      name: "Samsung Galaxy S24+",
-      price: "₹99,999",
-      image:
-        "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
-      rating: 4.4,
-    },
-    {
-      id: 3,
-      name: "Samsung Galaxy Buds2 Pro",
-      price: "₹17,999",
-      image:
-        "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg",
-      rating: 4.6,
-    },
-  ];
+    const cartItem = {
+      id: `${product.id}-${selectedVariant || "default"}`,
+      name: product.name,
+      price: currentPrice,
+      originalPrice: currentComparePrice || currentPrice,
+      image: currentImages[0]?.url || product.images[0]?.url || "",
+      vendor:
+        product.vendor.company ||
+        `${product.vendor.firstName} ${product.vendor.lastName}`,
+      store: product.store.name,
+      inStock: isInStock,
+      maxQuantity: currentStock,
+      variant: selectedVariant,
+      variantCombination: currentVariant?.combination,
+    };
+
+    addToCart(cartItem);
+    toast({
+      title: "Added to Cart!",
+      description: `${product.name}${selectedVariant ? ` (${selectedVariant})` : ""} has been added to your cart`,
+    });
+  };
+
+  // Handle buy now
+  const handleBuyNow = () => {
+    handleAddToCart();
+    navigate("/cart");
+  };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container py-6">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <Layout>
+        <div className="container py-6">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-red-600">
+              Product Not Found
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              {error || "The product you're looking for doesn't exist."}
+            </p>
+            <Button onClick={() => navigate("/")} className="mt-4">
+              Continue Shopping
+            </Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -137,13 +235,18 @@ export default function ProductDetail() {
           <div className="space-y-4">
             <div className="relative">
               <img
-                src={product.images[selectedImage]}
+                src={
+                  currentImages[selectedImage]?.url ||
+                  product.images[selectedImage]?.url
+                }
                 alt={product.name}
                 className="w-full h-96 object-cover rounded-lg"
               />
-              <div className="absolute top-4 left-4">
-                <Badge variant="secondary">{product.badge}</Badge>
-              </div>
+              {discountPercentage > 0 && (
+                <div className="absolute top-4 left-4">
+                  <Badge variant="destructive">{discountPercentage}% off</Badge>
+                </div>
+              )}
               <div className="absolute top-4 right-4 space-y-2">
                 <Button
                   variant="ghost"
@@ -162,24 +265,27 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            <div className="flex space-x-2">
-              {product.images.map((image, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedImage(index)}
-                  className={`w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                    selectedImage === index
-                      ? "border-primary"
-                      : "border-transparent"
-                  }`}
-                >
-                  <img
-                    src={image}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
+            {/* Thumbnail Images */}
+            <div className="flex space-x-2 overflow-x-auto">
+              {(currentImages.length > 0 ? currentImages : product.images).map(
+                (image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImage(index)}
+                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                      selectedImage === index
+                        ? "border-primary"
+                        : "border-transparent hover:border-gray-300"
+                    }`}
+                  >
+                    <img
+                      src={image.url}
+                      alt={image.alt || product.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ),
+              )}
             </div>
           </div>
 
@@ -192,13 +298,15 @@ export default function ProductDetail() {
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      className={`h-4 w-4 ${i < Math.floor(product.rating) ? "text-yellow-500 fill-current" : "text-gray-300"}`}
+                      className={`h-4 w-4 ${i < Math.floor(product.averageRating) ? "text-yellow-500 fill-current" : "text-gray-300"}`}
                     />
                   ))}
-                  <span className="ml-2 font-medium">{product.rating}</span>
+                  <span className="ml-2 font-medium">
+                    {product.averageRating}
+                  </span>
                 </div>
                 <span className="text-muted-foreground">
-                  ({product.reviews} reviews)
+                  ({product.totalReviews} reviews)
                 </span>
               </div>
             </div>
@@ -206,46 +314,35 @@ export default function ProductDetail() {
             <div className="space-y-2">
               <div className="flex items-baseline space-x-3">
                 <span className="text-3xl font-bold text-primary">
-                  {product.price}
+                  ₹{currentPrice.toLocaleString()}
                 </span>
-                <span className="text-lg text-muted-foreground line-through">
-                  {product.originalPrice}
-                </span>
-                <Badge variant="destructive">{product.discount}</Badge>
+                {currentComparePrice && currentComparePrice > currentPrice && (
+                  <span className="text-lg text-muted-foreground line-through">
+                    ₹{currentComparePrice.toLocaleString()}
+                  </span>
+                )}
+                {discountPercentage > 0 && (
+                  <Badge variant="destructive">{discountPercentage}% off</Badge>
+                )}
               </div>
-              <p className="text-sm text-green-600">You save ₹25,000</p>
+              {discountPercentage > 0 && (
+                <p className="text-sm text-green-600">
+                  You save ₹
+                  {((currentComparePrice || 0) - currentPrice).toLocaleString()}
+                </p>
+              )}
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-medium mb-2">Storage</h3>
-                <div className="flex space-x-2">
-                  {product.variants.map((variant) => (
-                    <Button
-                      key={variant}
-                      variant={
-                        selectedVariant === variant ? "default" : "outline"
-                      }
-                      size="sm"
-                      onClick={() => setSelectedVariant(variant)}
-                    >
-                      {variant}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-medium mb-2">Color</h3>
-                <div className="flex space-x-2">
-                  {product.colors.map((color) => (
-                    <Button key={color} variant="outline" size="sm">
-                      {color}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            {/* Variant Selector */}
+            {product.hasVariants && (
+              <VariantSelector
+                variants={product.variants}
+                variantTypes={product.variantTypes}
+                variantOptions={product.variantOptions}
+                selectedVariant={selectedVariant}
+                onVariantChange={handleVariantChange}
+              />
+            )}
 
             <div className="space-y-4">
               <div className="flex items-center space-x-4">
@@ -255,6 +352,7 @@ export default function ProductDetail() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    disabled={quantity <= 1}
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
@@ -263,69 +361,69 @@ export default function ProductDetail() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setQuantity(quantity + 1)}
+                    disabled={quantity >= currentStock}
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
-                <span className="text-green-600 font-medium">In Stock</span>
+                <span
+                  className={`font-medium ${isInStock ? "text-green-600" : "text-red-600"}`}
+                >
+                  {isInStock ? "In Stock" : "Out of Stock"}
+                </span>
               </div>
 
               <div className="flex space-x-3">
                 <Button
                   className="flex-1"
                   size="lg"
-                  onClick={() => {
-                    const cartItem = {
-                      id: product.id,
-                      name: product.name,
-                      price: product.price,
-                      originalPrice: product.originalPrice,
-                      image: product.images[0],
-                      vendor: product.seller,
-                      store: product.seller,
-                      inStock: product.inStock,
-                      maxQuantity: 10,
-                    };
-
-                    addToCart(cartItem);
-                    toast({
-                      title: "Added to Cart!",
-                      description: `${product.name} has been added to your cart`,
-                    });
-                  }}
-                  disabled={!product.inStock}
+                  onClick={handleAddToCart}
+                  disabled={!isInStock}
                 >
                   <ShoppingCart className="h-4 w-4 mr-2" />
-                  {isInCart(product.id)
-                    ? `In Cart (${getItemQuantity(product.id)})`
+                  {isInCart(`${product.id}-${selectedVariant || "default"}`)
+                    ? `In Cart (${getItemQuantity(`${product.id}-${selectedVariant || "default"}`)})`
                     : "Add to Cart"}
                 </Button>
                 <Button
                   variant="outline"
                   size="lg"
                   className="flex-1"
-                  onClick={() => {
-                    const cartItem = {
-                      id: product.id,
-                      name: product.name,
-                      price: product.price,
-                      originalPrice: product.originalPrice,
-                      image: product.images[0],
-                      vendor: product.seller,
-                      store: product.seller,
-                      inStock: product.inStock,
-                      maxQuantity: 10,
-                    };
-
-                    addToCart(cartItem);
-                    navigate("/cart");
-                  }}
-                  disabled={!product.inStock}
+                  onClick={handleBuyNow}
+                  disabled={!isInStock}
                 >
                   Buy Now
                 </Button>
               </div>
             </div>
+
+            {/* Product Description */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">Description</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                {product.description}
+              </p>
+            </div>
+
+            {/* Specifications */}
+            {product.specifications && product.specifications.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg">Specifications</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {product.specifications.map((spec, index) => (
+                    <div
+                      key={index}
+                      className="flex justify-between py-2 border-b"
+                    >
+                      <span className="font-medium">{spec.name}</span>
+                      <span className="text-muted-foreground">
+                        {spec.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Delivery Info */}
             <Card>
@@ -336,8 +434,7 @@ export default function ProductDetail() {
                     <div>
                       <p className="font-medium">Free Delivery</p>
                       <p className="text-sm text-muted-foreground">
-                        Estimated delivery in{" "}
-                        {product.deliveryInfo.estimatedDays} days
+                        Estimated delivery in 2-3 days
                       </p>
                     </div>
                   </div>
@@ -355,9 +452,9 @@ export default function ProductDetail() {
                   <div className="flex items-center space-x-3">
                     <Shield className="h-5 w-5 text-purple-600" />
                     <div>
-                      <p className="font-medium">{product.warranty}</p>
+                      <p className="font-medium">Secure Payment</p>
                       <p className="text-sm text-muted-foreground">
-                        Official warranty included
+                        100% secure checkout
                       </p>
                     </div>
                   </div>
@@ -367,139 +464,21 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        {/* Product Details */}
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            {/* Description */}
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-xl font-bold mb-4">Product Description</h2>
-                <p className="text-muted-foreground mb-4">
-                  {product.description}
-                </p>
-
-                <h3 className="font-semibold mb-3">Key Features:</h3>
-                <ul className="space-y-2">
-                  {product.features.map((feature, index) => (
-                    <li key={index} className="flex items-center">
-                      <Check className="h-4 w-4 text-green-600 mr-2" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-
-            {/* Specifications */}
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-xl font-bold mb-4">Specifications</h2>
-                <div className="space-y-3">
-                  {Object.entries(product.specifications).map(
-                    ([key, value]) => (
-                      <div
-                        key={key}
-                        className="flex justify-between py-2 border-b"
-                      >
-                        <span className="font-medium">{key}</span>
-                        <span className="text-muted-foreground">{value}</span>
-                      </div>
-                    ),
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Reviews */}
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-xl font-bold mb-4">Customer Reviews</h2>
-                <div className="space-y-4">
-                  {reviews.map((review) => (
-                    <div
-                      key={review.id}
-                      className="border-b pb-4 last:border-b-0"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-3">
-                          <span className="font-medium">{review.user}</span>
-                          {review.verified && (
-                            <Badge variant="outline" className="text-green-600">
-                              Verified
-                            </Badge>
-                          )}
-                        </div>
-                        <span className="text-sm text-muted-foreground">
-                          {review.date}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center mb-2">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-3 w-3 ${i < review.rating ? "text-yellow-500 fill-current" : "text-gray-300"}`}
-                          />
-                        ))}
-                      </div>
-
-                      <p className="text-sm">{review.comment}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <Button variant="outline" className="w-full mt-4">
-                  View All Reviews
-                </Button>
-              </CardContent>
-            </Card>
+        {/* Reviews Section */}
+        <div className="mt-12">
+          <h2 className="text-2xl font-bold mb-6">Customer Reviews</h2>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">Reviews coming soon...</p>
           </div>
+        </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Seller Info */}
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-3">Sold by</h3>
-                <p className="font-medium">{product.seller}</p>
-                <div className="flex items-center mt-2">
-                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                  <span className="ml-1 text-sm">4.8 seller rating</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Related Products */}
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-4">You might also like</h3>
-                <div className="space-y-4">
-                  {relatedProducts.map((relatedProduct) => (
-                    <div key={relatedProduct.id} className="flex space-x-3">
-                      <img
-                        src={relatedProduct.image}
-                        alt={relatedProduct.name}
-                        className="w-16 h-16 object-cover rounded"
-                      />
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm line-clamp-2">
-                          {relatedProduct.name}
-                        </h4>
-                        <p className="text-sm font-bold">
-                          {relatedProduct.price}
-                        </p>
-                        <div className="flex items-center">
-                          <Star className="h-3 w-3 text-yellow-500 fill-current" />
-                          <span className="ml-1 text-xs">
-                            {relatedProduct.rating}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+        {/* Related Products */}
+        <div className="mt-12">
+          <h2 className="text-2xl font-bold mb-6">You Might Also Like</h2>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">
+              Related products coming soon...
+            </p>
           </div>
         </div>
       </div>

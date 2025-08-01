@@ -19,6 +19,8 @@ interface CartItem {
   store: string;
   inStock: boolean;
   maxQuantity?: number;
+  variant?: string;
+  variantCombination?: string;
 }
 
 interface CartContextType {

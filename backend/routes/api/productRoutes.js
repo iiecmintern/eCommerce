@@ -15,6 +15,13 @@ const {
   updateProductStatus,
   updateProductStock,
   getCategories,
+  // Variant management
+  getProductVariants,
+  addProductVariant,
+  updateProductVariant,
+  deleteProductVariant,
+  updateVariantStock,
+  bulkUpdateVariants,
 } = require("../../controllers/product/productController");
 
 // Validation middleware
@@ -134,6 +141,113 @@ const validateStockUpdate = [
     .withMessage("Invalid operation"),
 ];
 
+// Variant validation middleware
+const validateVariant = [
+  body("options")
+    .isArray({ min: 1 })
+    .withMessage("At least one variant option is required"),
+  body("options.*.type")
+    .isIn(["color", "size", "material", "storage", "style", "other"])
+    .withMessage("Invalid variant type"),
+  body("options.*.name")
+    .trim()
+    .notEmpty()
+    .withMessage("Variant option name is required"),
+  body("options.*.value")
+    .trim()
+    .notEmpty()
+    .withMessage("Variant option value is required"),
+  body("price")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Variant price must be a positive number"),
+  body("compareAtPrice")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Variant compare price must be a positive number"),
+  body("costPrice")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Variant cost price must be a positive number"),
+  body("stockQuantity")
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage("Variant stock quantity must be a non-negative integer"),
+  body("lowStockThreshold")
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage("Low stock threshold must be a non-negative integer"),
+  body("sku")
+    .optional()
+    .trim()
+    .isLength({ min: 3, max: 50 })
+    .withMessage("Variant SKU must be between 3 and 50 characters"),
+  body("images")
+    .optional()
+    .isArray()
+    .withMessage("Variant images must be an array"),
+  body("images.*.url")
+    .optional()
+    .isURL()
+    .withMessage("Invalid variant image URL"),
+  body("weight")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Variant weight must be a positive number"),
+];
+
+const validateVariantUpdate = [
+  body("price")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Variant price must be a positive number"),
+  body("compareAtPrice")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Variant compare price must be a positive number"),
+  body("costPrice")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Variant cost price must be a positive number"),
+  body("stockQuantity")
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage("Variant stock quantity must be a non-negative integer"),
+  body("lowStockThreshold")
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage("Low stock threshold must be a non-negative integer"),
+  body("sku")
+    .optional()
+    .trim()
+    .isLength({ min: 3, max: 50 })
+    .withMessage("Variant SKU must be between 3 and 50 characters"),
+  body("isActive")
+    .optional()
+    .isBoolean()
+    .withMessage("isActive must be a boolean"),
+];
+
+const validateVariantStockUpdate = [
+  body("quantity")
+    .isFloat({ min: 0 })
+    .withMessage("Quantity must be a positive number"),
+  body("operation")
+    .optional()
+    .isIn(["increase", "decrease"])
+    .withMessage("Operation must be 'increase' or 'decrease'"),
+];
+
+const validateBulkVariantUpdate = [
+  body("variants")
+    .isArray({ min: 1 })
+    .withMessage("At least one variant is required"),
+  body("variants.*.combination")
+    .trim()
+    .notEmpty()
+    .withMessage("Variant combination is required"),
+];
+
 // Public routes
 router.get("/", getAllProducts);
 router.get("/categories", getCategories);
@@ -141,6 +255,7 @@ router.get("/featured", getFeaturedProducts);
 router.get("/search", searchProducts);
 router.get("/category/:category", getProductsByCategory);
 router.get("/:id", getProduct);
+router.get("/:id/variants", getProductVariants);
 
 // Protected routes (Vendor and Admin)
 router.use(protect);
@@ -153,5 +268,20 @@ router.put("/:id", validateProductUpdate, updateProduct);
 router.delete("/:id", deleteProduct);
 router.patch("/:id/status", validateStatusUpdate, updateProductStatus);
 router.patch("/:id/stock", validateStockUpdate, updateProductStock);
+
+// Variant management routes
+router.post("/:id/variants", validateVariant, addProductVariant);
+router.put(
+  "/:id/variants/:combination",
+  validateVariantUpdate,
+  updateProductVariant
+);
+router.delete("/:id/variants/:combination", deleteProductVariant);
+router.patch(
+  "/:id/variants/:combination/stock",
+  validateVariantStockUpdate,
+  updateVariantStock
+);
+router.put("/:id/variants/bulk", validateBulkVariantUpdate, bulkUpdateVariants);
 
 module.exports = router;
