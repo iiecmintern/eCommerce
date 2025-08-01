@@ -3,6 +3,7 @@ const Product = require("../../models/product/Product");
 const Store = require("../../models/store/Store");
 const User = require("../../models/user/User");
 const { validationResult } = require("express-validator");
+const emailService = require("../../utils/email/emailService");
 
 // @desc    Create a new order (simplified for our checkout flow)
 // @route   POST /api/orders
@@ -68,6 +69,24 @@ const createOrder = async (req, res) => {
       { path: "customer", select: "firstName lastName email" },
       { path: "items.productId", select: "name images price" },
     ]);
+
+    // Send order confirmation email
+    try {
+      const emailResult = await emailService.sendOrderConfirmation(
+        order,
+        order.customer
+      );
+      if (!emailResult.success) {
+        console.error(
+          "Failed to send order confirmation email:",
+          emailResult.error
+        );
+        // Don't fail the request, just log the error
+      }
+    } catch (emailError) {
+      console.error("Error sending order confirmation email:", emailError);
+      // Don't fail the request, just log the error
+    }
 
     res.status(201).json({
       success: true,
@@ -362,6 +381,25 @@ const updateOrderStatus = async (req, res) => {
       { path: "store", select: "name" },
       { path: "items.productId", select: "name images price" },
     ]);
+
+    // Send order status update email
+    try {
+      const emailResult = await emailService.sendOrderStatusUpdate(
+        order,
+        order.customer,
+        status
+      );
+      if (!emailResult.success) {
+        console.error(
+          "Failed to send order status update email:",
+          emailResult.error
+        );
+        // Don't fail the request, just log the error
+      }
+    } catch (emailError) {
+      console.error("Error sending order status update email:", emailError);
+      // Don't fail the request, just log the error
+    }
 
     res.json({
       success: true,

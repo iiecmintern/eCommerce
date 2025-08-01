@@ -9,6 +9,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { SearchProvider } from "@/contexts/SearchContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Features from "./pages/Features";
@@ -122,6 +123,7 @@ const AppRoutes = () => {
       <Route path="/marketplace" element={<Marketplace />} />
       <Route path="/demo" element={<Demo />} />
       <Route path="/get-started" element={<GetStarted />} />
+      <Route path="/search" element={<SearchResults />} />
 
       {/* Protected Dashboard routes */}
       <Route
@@ -358,18 +360,20 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <CartProvider>
-        <ThemeProvider
-          defaultTheme="system"
-          storageKey="commerceforge-ui-theme"
-        >
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <AppRoutes />
-            </BrowserRouter>
-          </TooltipProvider>
-        </ThemeProvider>
+        <SearchProvider>
+          <ThemeProvider
+            defaultTheme="system"
+            storageKey="commerceforge-ui-theme"
+          >
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <AppRoutes />
+              </BrowserRouter>
+            </TooltipProvider>
+          </ThemeProvider>
+        </SearchProvider>
       </CartProvider>
     </AuthProvider>
   </QueryClientProvider>

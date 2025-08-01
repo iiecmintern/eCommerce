@@ -5,6 +5,7 @@ const {
   hashToken,
 } = require("../../utils/auth");
 const { validationResult } = require("express-validator");
+const emailService = require("../../utils/email/emailService");
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -366,8 +367,23 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    // TODO: Send email with reset token
-    console.log("Password reset token:", resetToken);
+    // Send password reset email
+    try {
+      const emailResult = await emailService.sendPasswordReset(
+        user,
+        resetToken
+      );
+      if (!emailResult.success) {
+        console.error(
+          "Failed to send password reset email:",
+          emailResult.error
+        );
+        // Don't fail the request, just log the error
+      }
+    } catch (emailError) {
+      console.error("Error sending password reset email:", emailError);
+      // Don't fail the request, just log the error
+    }
 
     res.status(200).json({
       success: true,

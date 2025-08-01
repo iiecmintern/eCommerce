@@ -124,7 +124,7 @@ export function Sidebar({
             // Count products by category
             const categoryCounts: { [key: string]: number } = {};
             products.forEach((product: any) => {
-              if (product.category && product.status === "active") {
+              if (product.category && product.isPublished === true) {
                 categoryCounts[product.category] =
                   (categoryCounts[product.category] || 0) + 1;
               }

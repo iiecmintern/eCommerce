@@ -23,7 +23,6 @@ const getAllProducts = async (req, res) => {
 
     // Build query
     const query = {
-      status: "active",
       isPublished: true,
     };
 
@@ -242,7 +241,6 @@ const getFeaturedProducts = async (req, res) => {
     try {
       products = await Product.find({
         isFeatured: true,
-        status: "active",
         isPublished: true,
       })
         .populate("vendor", "firstName lastName company")
@@ -842,7 +840,6 @@ const updateProductStock = async (req, res) => {
 const getCategories = async (req, res) => {
   try {
     const categories = await Product.distinct("category", {
-      status: "active",
       isPublished: true,
     });
 
