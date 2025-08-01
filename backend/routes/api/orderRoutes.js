@@ -4,6 +4,7 @@ const { body } = require("express-validator");
 const { protect, restrictTo } = require("../../middleware/auth/auth");
 const {
   createOrder,
+  processPayment,
   getAllOrders,
   getOrder,
   updateOrderStatus,
@@ -13,80 +14,74 @@ const {
   getOrderStats,
 } = require("../../controllers/order/orderController");
 
-// Validation middleware for creating order
+// Simplified validation middleware for creating order
 const validateCreateOrder = [
   body("items")
     .isArray({ min: 1 })
     .withMessage("Order must contain at least one item"),
-  body("items.*.productId").isMongoId().withMessage("Invalid product ID"),
+  body("items.*.productId").notEmpty().withMessage("Product ID is required"),
   body("items.*.quantity")
     .isInt({ min: 1 })
     .withMessage("Quantity must be at least 1"),
-  body("items.*.variant")
-    .optional()
-    .isObject()
-    .withMessage("Variant must be an object"),
-  body("shippingAddress.name")
+  body("items.*.price")
+    .isFloat({ min: 0 })
+    .withMessage("Price must be a positive number"),
+  body("shippingAddress.firstName")
     .trim()
     .notEmpty()
-    .withMessage("Shipping name is required"),
+    .withMessage("First name is required"),
+  body("shippingAddress.lastName")
+    .trim()
+    .notEmpty()
+    .withMessage("Last name is required"),
+  body("shippingAddress.email")
+    .isEmail()
+    .withMessage("Valid email is required"),
   body("shippingAddress.phone")
     .trim()
     .notEmpty()
-    .withMessage("Shipping phone is required")
-    .matches(/^[6-9]\d{9}$/)
-    .withMessage("Valid Indian phone number is required"),
-  body("shippingAddress.street")
+    .withMessage("Phone number is required"),
+  body("shippingAddress.address")
     .trim()
     .notEmpty()
-    .withMessage("Shipping street address is required"),
+    .withMessage("Address is required"),
   body("shippingAddress.city")
     .trim()
     .notEmpty()
-    .withMessage("Shipping city is required"),
+    .withMessage("City is required"),
   body("shippingAddress.state")
     .trim()
     .notEmpty()
-    .withMessage("Shipping state is required"),
-  body("shippingAddress.pincode")
+    .withMessage("State is required"),
+  body("shippingAddress.zipCode")
     .trim()
     .notEmpty()
-    .withMessage("Shipping pincode is required")
-    .matches(/^[1-9][0-9]{5}$/)
-    .withMessage("Valid Indian pincode is required"),
-  body("billingAddress")
-    .optional()
-    .isObject()
-    .withMessage("Billing address must be an object"),
+    .withMessage("ZIP code is required"),
   body("paymentMethod")
-    .isIn(["cod", "online", "upi", "card", "netbanking", "wallet"])
+    .isIn(["cod", "card", "upi"])
     .withMessage("Invalid payment method"),
-  body("orderType")
+  body("subtotal")
+    .isFloat({ min: 0 })
+    .withMessage("Subtotal must be a positive number"),
+  body("total")
+    .isFloat({ min: 0 })
+    .withMessage("Total must be a positive number"),
+];
+
+// Validation middleware for payment processing
+const validatePayment = [
+  body("paymentMethod")
+    .isIn(["cod", "card", "upi"])
+    .withMessage("Invalid payment method"),
+  body("paymentStatus")
     .optional()
-    .isIn(["retail", "wholesale", "subscription"])
-    .withMessage("Invalid order type"),
-  body("appliedCoupon")
-    .optional()
-    .isObject()
-    .withMessage("Applied coupon must be an object"),
-  body("appliedCoupon.code")
+    .isIn(["pending", "paid", "failed"])
+    .withMessage("Invalid payment status"),
+  body("transactionId")
     .optional()
     .trim()
     .notEmpty()
-    .withMessage("Coupon code is required if coupon is applied"),
-  body("appliedCoupon.discount")
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage("Coupon discount must be a positive number"),
-  body("appliedCoupon.discountType")
-    .optional()
-    .isIn(["percentage", "fixed"])
-    .withMessage("Invalid discount type"),
-  body("notes.customer")
-    .optional()
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage("Customer notes cannot exceed 500 characters"),
+    .withMessage("Transaction ID cannot be empty"),
 ];
 
 // Validation middleware for updating order status
@@ -170,6 +165,16 @@ router.post(
   validateCreateOrder,
   createOrder
 );
+
+// Payment processing route
+router.post(
+  "/:id/payment",
+  protect,
+  restrictTo("customer"),
+  validatePayment,
+  processPayment
+);
+
 router.get("/my", protect, restrictTo("customer"), getAllOrders);
 router.get("/my/:id", protect, restrictTo("customer"), getOrder);
 router.post(

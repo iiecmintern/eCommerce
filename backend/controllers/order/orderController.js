@@ -4,28 +4,19 @@ const Store = require("../../models/store/Store");
 const User = require("../../models/user/User");
 const { validationResult } = require("express-validator");
 
-// @desc    Create a new order
+// @desc    Create a new order (simplified for our checkout flow)
 // @route   POST /api/orders
 // @access  Private (Customer)
 const createOrder = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: "Validation failed",
-        errors: errors.array(),
-      });
-    }
-
     const {
       items,
       shippingAddress,
-      billingAddress,
       paymentMethod,
-      appliedCoupon,
-      notes,
-      orderType = "retail",
+      subtotal,
+      totalDiscount,
+      total,
+      status = "pending",
     } = req.body;
 
     // Validate items
@@ -36,153 +27,138 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // Group items by store/vendor
-    const storeGroups = {};
-    for (const item of items) {
-      const product = await Product.findById(item.productId)
-        .populate("store")
-        .populate("vendor");
-
-      if (!product) {
-        return res.status(400).json({
-          success: false,
-          message: `Product with ID ${item.productId} not found`,
-        });
-      }
-
-      if (product.status !== "active" || !product.isPublished) {
-        return res.status(400).json({
-          success: false,
-          message: `Product ${product.name} is not available for purchase`,
-        });
-      }
-
-      if (product.stockQuantity < item.quantity) {
-        return res.status(400).json({
-          success: false,
-          message: `Insufficient stock for product ${product.name}`,
-        });
-      }
-
-      const storeId = product.store._id.toString();
-      if (!storeGroups[storeId]) {
-        storeGroups[storeId] = {
-          store: product.store,
-          vendor: product.vendor,
-          items: [],
-        };
-      }
-
-      storeGroups[storeId].items.push({
-        product: product._id,
-        variant: item.variant || {},
+    // Create a simple order structure
+    const orderData = {
+      customer: req.user._id,
+      items: items.map((item) => ({
+        productId: item.productId,
+        name: item.name,
         quantity: item.quantity,
-        unitPrice: product.price,
-        totalPrice: product.price * item.quantity,
-        gstRate: product.gstRate || 18,
-        gstAmount:
-          (product.price * item.quantity * (product.gstRate || 18)) / 100,
-        discount: 0,
-      });
-    }
+        price: item.price,
+        image: item.image,
+        vendor: item.vendor,
+        store: item.store,
+        total: item.price * item.quantity,
+      })),
+      shippingAddress,
+      paymentMethod,
+      pricing: {
+        subtotal: subtotal || 0,
+        discount: totalDiscount || 0,
+        total: total || 0,
+        currency: "INR",
+      },
+      status: status,
+      payment: {
+        method: paymentMethod,
+        status: "pending",
+        amount: total || 0,
+      },
+      orderNumber: `ORD-${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 9)
+        .toUpperCase()}`,
+    };
 
-    // Create orders for each store
-    const createdOrders = [];
+    const order = new Order(orderData);
+    await order.save();
 
-    for (const [storeId, group] of Object.entries(storeGroups)) {
-      // Calculate totals
-      let subtotal = 0;
-      let tax = 0;
-      let discount = 0;
-
-      group.items.forEach((item) => {
-        subtotal += item.totalPrice;
-        tax += item.gstAmount;
-        discount += item.discount;
-      });
-
-      // Calculate shipping cost (basic logic - can be enhanced)
-      const shippingCost = subtotal > 50000 ? 0 : 199; // Free shipping above 50k
-
-      // Calculate coupon discount
-      let couponDiscount = 0;
-      if (appliedCoupon && appliedCoupon.code) {
-        // Basic coupon logic - can be enhanced
-        if (appliedCoupon.discountType === "percentage") {
-          couponDiscount = (subtotal * appliedCoupon.discount) / 100;
-        } else {
-          couponDiscount = appliedCoupon.discount;
-        }
-      }
-
-      const total = subtotal + tax + shippingCost - discount - couponDiscount;
-
-      // Create order
-      const orderData = {
-        orderType,
-        customer: req.user._id,
-        store: group.store._id,
-        vendor: group.vendor._id,
-        items: group.items,
-        pricing: {
-          subtotal,
-          tax,
-          shipping: shippingCost,
-          discount,
-          couponDiscount,
-          total,
-          currency: group.store.settings?.currency || "INR",
-        },
-        appliedCoupon: appliedCoupon || {},
-        shipping: {
-          address: shippingAddress,
-          method: "standard",
-          cost: shippingCost,
-          estimatedDelivery: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-        },
-        billing: {
-          address: billingAddress || shippingAddress,
-        },
-        payment: {
-          method: paymentMethod,
-          status: "pending",
-          amount: total,
-        },
-        notes: {
-          customer: notes?.customer || "",
-        },
-      };
-
-      const order = new Order(orderData);
-      await order.save();
-
-      // Update product stock
-      for (const item of group.items) {
-        await Product.findByIdAndUpdate(item.product, {
-          $inc: { stockQuantity: -item.quantity },
-        });
-      }
-
-      // Populate references for response
-      await order.populate([
-        { path: "store", select: "name" },
-        { path: "vendor", select: "firstName lastName" },
-        { path: "items.product", select: "name images price" },
-      ]);
-
-      createdOrders.push(order);
-    }
+    // Populate references for response
+    await order.populate([
+      { path: "customer", select: "firstName lastName email" },
+      { path: "items.productId", select: "name images price" },
+    ]);
 
     res.status(201).json({
       success: true,
       message: "Order created successfully",
-      data: createdOrders.length === 1 ? createdOrders[0] : createdOrders,
+      data: {
+        id: order._id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        total: order.pricing.total,
+      },
     });
   } catch (error) {
     console.error("Error creating order:", error);
     res.status(500).json({
       success: false,
       message: "Error creating order",
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Process payment for an order (simplified)
+// @route   POST /api/orders/:id/payment
+// @access  Private
+const processPayment = async (req, res) => {
+  try {
+    const { paymentMethod, paymentStatus, transactionId } = req.body;
+
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // Check if user has permission to update this order
+    if (order.customer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have permission to update this order",
+      });
+    }
+
+    // Update payment information
+    order.payment.status = paymentStatus || "paid";
+    order.payment.method = paymentMethod;
+    if (transactionId) {
+      order.payment.transactionId = transactionId;
+    }
+    order.payment.paidAt = new Date();
+
+    // Update order status to confirmed
+    order.status = "confirmed";
+
+    // Add status history
+    if (!order.statusHistory) {
+      order.statusHistory = [];
+    }
+    order.statusHistory.push({
+      status: "confirmed",
+      note: "Payment processed successfully",
+      updatedBy: req.user._id,
+      updatedAt: new Date(),
+    });
+
+    await order.save();
+
+    // Populate references for response
+    await order.populate([
+      { path: "customer", select: "firstName lastName email" },
+      { path: "items.productId", select: "name images price" },
+    ]);
+
+    res.json({
+      success: true,
+      message: "Payment processed successfully",
+      data: {
+        id: order._id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        paymentStatus: order.payment.status,
+        total: order.pricing.total,
+      },
+    });
+  } catch (error) {
+    console.error("Error processing payment:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error processing payment",
       error: error.message,
     });
   }
@@ -246,7 +222,7 @@ const getAllOrders = async (req, res) => {
       .populate("customer", "firstName lastName email")
       .populate("vendor", "firstName lastName")
       .populate("store", "name")
-      .populate("items.product", "name images price")
+      .populate("items.productId", "name images price")
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
@@ -282,7 +258,7 @@ const getOrder = async (req, res) => {
       .populate("customer", "firstName lastName email phone")
       .populate("vendor", "firstName lastName email")
       .populate("store", "name contact")
-      .populate("items.product", "name images price sku")
+      .populate("items.productId", "name images price sku")
       .populate("statusHistory.updatedBy", "firstName lastName");
 
     if (!order) {
@@ -364,14 +340,27 @@ const updateOrderStatus = async (req, res) => {
     }
 
     // Update order status
-    await order.updateStatus(status, note, req.user._id);
+    order.status = status;
+
+    // Add status history
+    if (!order.statusHistory) {
+      order.statusHistory = [];
+    }
+    order.statusHistory.push({
+      status: status,
+      note: note || `Order status updated to ${status}`,
+      updatedBy: req.user._id,
+      updatedAt: new Date(),
+    });
+
+    await order.save();
 
     // Populate references for response
     await order.populate([
       { path: "customer", select: "firstName lastName email" },
       { path: "vendor", select: "firstName lastName" },
       { path: "store", select: "name" },
-      { path: "items.product", select: "name images price" },
+      { path: "items.productId", select: "name images price" },
     ]);
 
     res.json({
@@ -446,7 +435,7 @@ const updatePaymentStatus = async (req, res) => {
       { path: "customer", select: "firstName lastName email" },
       { path: "vendor", select: "firstName lastName" },
       { path: "store", select: "name" },
-      { path: "items.product", select: "name images price" },
+      { path: "items.productId", select: "name images price" },
     ]);
 
     res.json({
@@ -501,18 +490,21 @@ const addTrackingInfo = async (req, res) => {
     }
 
     // Add tracking information
-    await order.addTracking({
+    order.tracking = {
       trackingNumber,
       trackingUrl,
       carrier,
-    });
+      addedAt: new Date(),
+    };
+
+    await order.save();
 
     // Populate references for response
     await order.populate([
       { path: "customer", select: "firstName lastName email" },
       { path: "vendor", select: "firstName lastName" },
       { path: "store", select: "name" },
-      { path: "items.product", select: "name images price" },
+      { path: "items.productId", select: "name images price" },
     ]);
 
     res.json({
@@ -579,21 +571,27 @@ const cancelOrder = async (req, res) => {
     }
 
     // Cancel order
-    await order.updateStatus("cancelled", reason, req.user._id);
+    order.status = "cancelled";
 
-    // Restore product stock
-    for (const item of order.items) {
-      await Product.findByIdAndUpdate(item.product, {
-        $inc: { stockQuantity: item.quantity },
-      });
+    // Add status history
+    if (!order.statusHistory) {
+      order.statusHistory = [];
     }
+    order.statusHistory.push({
+      status: "cancelled",
+      note: reason || "Order cancelled by user",
+      updatedBy: req.user._id,
+      updatedAt: new Date(),
+    });
+
+    await order.save();
 
     // Populate references for response
     await order.populate([
       { path: "customer", select: "firstName lastName email" },
       { path: "vendor", select: "firstName lastName" },
       { path: "store", select: "name" },
-      { path: "items.product", select: "name images price" },
+      { path: "items.productId", select: "name images price" },
     ]);
 
     res.json({
@@ -692,6 +690,7 @@ const getOrderStats = async (req, res) => {
 
 module.exports = {
   createOrder,
+  processPayment,
   getAllOrders,
   getOrder,
   updateOrderStatus,

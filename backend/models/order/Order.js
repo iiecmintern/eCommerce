@@ -8,11 +8,6 @@ const orderSchema = new mongoose.Schema(
       unique: true,
       required: true,
     },
-    orderType: {
-      type: String,
-      enum: ["retail", "wholesale", "subscription"],
-      default: "retail",
-    },
 
     // Customer Information
     customer: {
@@ -20,70 +15,85 @@ const orderSchema = new mongoose.Schema(
       ref: "User",
       required: [true, "Customer is required"],
     },
-    guestCustomer: {
-      name: String,
-      email: String,
-      phone: String,
-    },
 
-    // Store and Vendor Information
-    store: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Store",
-      required: [true, "Store is required"],
-    },
-    vendor: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: [true, "Vendor is required"],
-    },
-
-    // Order Items
+    // Order Items (simplified)
     items: [
       {
-        product: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Product",
+        productId: {
+          type: String,
           required: true,
         },
-        variant: {
-          name: String,
-          value: String,
-          sku: String,
+        name: {
+          type: String,
+          required: true,
         },
         quantity: {
           type: Number,
           required: true,
           min: [1, "Quantity must be at least 1"],
         },
-        unitPrice: {
+        price: {
           type: Number,
           required: true,
-          min: [0, "Unit price cannot be negative"],
+          min: [0, "Price cannot be negative"],
         },
-        totalPrice: {
+        image: String,
+        vendor: String,
+        store: String,
+        total: {
           type: Number,
           required: true,
-          min: [0, "Total price cannot be negative"],
-        },
-        gstRate: {
-          type: Number,
-          default: 18,
-        },
-        gstAmount: {
-          type: Number,
-          default: 0,
-        },
-        discount: {
-          type: Number,
-          default: 0,
-        },
-        appliedCoupon: {
-          code: String,
-          discount: Number,
+          min: [0, "Total cannot be negative"],
         },
       },
     ],
+
+    // Shipping Address
+    shippingAddress: {
+      firstName: {
+        type: String,
+        required: true,
+      },
+      lastName: {
+        type: String,
+        required: true,
+      },
+      email: {
+        type: String,
+        required: true,
+      },
+      phone: {
+        type: String,
+        required: true,
+      },
+      address: {
+        type: String,
+        required: true,
+      },
+      city: {
+        type: String,
+        required: true,
+      },
+      state: {
+        type: String,
+        required: true,
+      },
+      zipCode: {
+        type: String,
+        required: true,
+      },
+      country: {
+        type: String,
+        default: "India",
+      },
+    },
+
+    // Payment Information
+    paymentMethod: {
+      type: String,
+      enum: ["cod", "card", "upi"],
+      required: true,
+    },
 
     // Pricing Breakdown
     pricing: {
@@ -92,25 +102,10 @@ const orderSchema = new mongoose.Schema(
         required: true,
         min: [0, "Subtotal cannot be negative"],
       },
-      tax: {
-        type: Number,
-        default: 0,
-        min: [0, "Tax cannot be negative"],
-      },
-      shipping: {
-        type: Number,
-        default: 0,
-        min: [0, "Shipping cannot be negative"],
-      },
       discount: {
         type: Number,
         default: 0,
         min: [0, "Discount cannot be negative"],
-      },
-      couponDiscount: {
-        type: Number,
-        default: 0,
-        min: [0, "Coupon discount cannot be negative"],
       },
       total: {
         type: Number,
@@ -123,109 +118,24 @@ const orderSchema = new mongoose.Schema(
       },
     },
 
-    // Applied Coupon
-    appliedCoupon: {
-      code: String,
-      discount: Number,
-      discountType: {
-        type: String,
-        enum: ["percentage", "fixed"],
-        default: "percentage",
-      },
-    },
-
-    // Shipping Information
-    shipping: {
-      address: {
-        name: {
-          type: String,
-          required: true,
-        },
-        phone: {
-          type: String,
-          required: true,
-        },
-        email: String,
-        street: {
-          type: String,
-          required: true,
-        },
-        city: {
-          type: String,
-          required: true,
-        },
-        state: {
-          type: String,
-          required: true,
-        },
-        country: {
-          type: String,
-          default: "India",
-        },
-        pincode: {
-          type: String,
-          required: true,
-        },
-        landmark: String,
-      },
-      method: {
-        type: String,
-        enum: ["standard", "express", "premium", "free"],
-        default: "standard",
-      },
-      cost: {
-        type: Number,
-        default: 0,
-      },
-      estimatedDelivery: {
-        type: Date,
-      },
-      trackingNumber: String,
-      trackingUrl: String,
-      carrier: String,
-    },
-
-    // Billing Information
-    billing: {
-      address: {
-        name: String,
-        phone: String,
-        email: String,
-        street: String,
-        city: String,
-        state: String,
-        country: String,
-        pincode: String,
-      },
-      gstNumber: String,
-      panNumber: String,
-    },
-
-    // Payment Information
+    // Payment Details
     payment: {
       method: {
         type: String,
-        enum: ["cod", "online", "upi", "card", "netbanking", "wallet"],
+        enum: ["cod", "card", "upi"],
         required: true,
       },
       status: {
         type: String,
-        enum: ["pending", "processing", "completed", "failed", "refunded"],
+        enum: ["pending", "paid", "failed"],
         default: "pending",
       },
       transactionId: String,
-      gateway: String,
       amount: {
         type: Number,
         required: true,
       },
       paidAt: Date,
-      refundAmount: {
-        type: Number,
-        default: 0,
-      },
-      refundReason: String,
-      refundedAt: Date,
     },
 
     // Order Status
@@ -236,37 +146,37 @@ const orderSchema = new mongoose.Schema(
         "confirmed",
         "processing",
         "shipped",
-        "out_for_delivery",
         "delivered",
         "cancelled",
-        "returned",
-        "refunded",
       ],
       default: "pending",
     },
+
+    // Status History
     statusHistory: [
       {
         status: {
           type: String,
           required: true,
         },
-        timestamp: {
-          type: Date,
-          default: Date.now,
-        },
         note: String,
         updatedBy: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "User",
         },
+        updatedAt: {
+          type: Date,
+          default: Date.now,
+        },
       },
     ],
 
-    // Notes and Comments
-    notes: {
-      customer: String,
-      vendor: String,
-      admin: String,
+    // Tracking Information
+    tracking: {
+      trackingNumber: String,
+      trackingUrl: String,
+      carrier: String,
+      addedAt: Date,
     },
 
     // Timestamps
@@ -278,10 +188,6 @@ const orderSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
-    confirmedAt: Date,
-    shippedAt: Date,
-    deliveredAt: Date,
-    cancelledAt: Date,
   },
   {
     timestamps: true,
@@ -302,11 +208,8 @@ orderSchema.virtual("statusDisplay").get(function () {
     confirmed: "Confirmed",
     processing: "Processing",
     shipped: "Shipped",
-    out_for_delivery: "Out for Delivery",
     delivered: "Delivered",
     cancelled: "Cancelled",
-    returned: "Returned",
-    refunded: "Refunded",
   };
   return statusMap[this.status] || this.status;
 });
@@ -315,25 +218,25 @@ orderSchema.virtual("statusDisplay").get(function () {
 orderSchema.virtual("paymentStatusDisplay").get(function () {
   const statusMap = {
     pending: "Pending",
-    processing: "Processing",
-    completed: "Completed",
+    paid: "Paid",
     failed: "Failed",
-    refunded: "Refunded",
   };
   return statusMap[this.payment.status] || this.payment.status;
+});
+
+// Virtual for customer full name
+orderSchema.virtual("customerFullName").get(function () {
+  return `${this.shippingAddress.firstName} ${this.shippingAddress.lastName}`;
 });
 
 // Indexes for better query performance
 orderSchema.index({ orderNumber: 1 });
 orderSchema.index({ customer: 1 });
-orderSchema.index({ vendor: 1 });
-orderSchema.index({ store: 1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ "payment.status": 1 });
 orderSchema.index({ createdAt: -1 });
-orderSchema.index({ "shipping.trackingNumber": 1 });
 
-// Pre-save middleware to generate order number
+// Pre-save middleware to generate order number if not provided
 orderSchema.pre("save", function (next) {
   if (!this.orderNumber) {
     const timestamp = Date.now().toString().slice(-8);
@@ -343,11 +246,12 @@ orderSchema.pre("save", function (next) {
     this.orderNumber = `ORD${timestamp}${random}`;
   }
 
-  // Update status history
-  if (this.isModified("status")) {
+  // Update status history if status changed
+  if (this.isModified("status") && this.statusHistory) {
     this.statusHistory.push({
       status: this.status,
-      timestamp: new Date(),
+      note: `Order status updated to ${this.status}`,
+      updatedAt: new Date(),
     });
   }
 
@@ -356,53 +260,7 @@ orderSchema.pre("save", function (next) {
 
 // Static method to find orders by customer
 orderSchema.statics.findByCustomer = function (customerId) {
-  return this.find({ customer: customerId })
-    .populate("store", "name")
-    .populate("vendor", "firstName lastName")
-    .populate("items.product", "name images price")
-    .sort({ createdAt: -1 });
-};
-
-// Static method to find orders by vendor
-orderSchema.statics.findByVendor = function (vendorId) {
-  return this.find({ vendor: vendorId })
-    .populate("customer", "firstName lastName email")
-    .populate("items.product", "name images price")
-    .sort({ createdAt: -1 });
-};
-
-// Static method to find orders by store
-orderSchema.statics.findByStore = function (storeId) {
-  return this.find({ store: storeId })
-    .populate("customer", "firstName lastName email")
-    .populate("items.product", "name images price")
-    .sort({ createdAt: -1 });
-};
-
-// Instance method to calculate totals
-orderSchema.methods.calculateTotals = function () {
-  let subtotal = 0;
-  let tax = 0;
-  let discount = 0;
-
-  this.items.forEach((item) => {
-    const itemTotal = item.quantity * item.unitPrice;
-    subtotal += itemTotal;
-    tax += item.gstAmount || 0;
-    discount += item.discount || 0;
-  });
-
-  this.pricing.subtotal = subtotal;
-  this.pricing.tax = tax;
-  this.pricing.discount = discount;
-  this.pricing.total =
-    subtotal +
-    tax +
-    this.pricing.shipping -
-    discount -
-    this.pricing.couponDiscount;
-
-  return this.save();
+  return this.find({ customer: customerId }).sort({ createdAt: -1 });
 };
 
 // Instance method to update order status
@@ -413,28 +271,16 @@ orderSchema.methods.updateStatus = function (
 ) {
   this.status = newStatus;
 
-  // Set specific timestamps
-  switch (newStatus) {
-    case "confirmed":
-      this.confirmedAt = new Date();
-      break;
-    case "shipped":
-      this.shippedAt = new Date();
-      break;
-    case "delivered":
-      this.deliveredAt = new Date();
-      break;
-    case "cancelled":
-      this.cancelledAt = new Date();
-      break;
+  // Add to status history
+  if (!this.statusHistory) {
+    this.statusHistory = [];
   }
 
-  // Add to status history
   this.statusHistory.push({
     status: newStatus,
-    timestamp: new Date(),
-    note,
+    note: note || `Order status updated to ${newStatus}`,
     updatedBy,
+    updatedAt: new Date(),
   });
 
   return this.save();
@@ -453,9 +299,10 @@ orderSchema.methods.processPayment = function (paymentData) {
 
 // Instance method to add tracking information
 orderSchema.methods.addTracking = function (trackingData) {
-  this.shipping = {
-    ...this.shipping,
+  this.tracking = {
+    ...this.tracking,
     ...trackingData,
+    addedAt: new Date(),
   };
 
   return this.save();

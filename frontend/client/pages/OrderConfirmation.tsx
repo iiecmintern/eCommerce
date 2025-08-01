@@ -1,109 +1,185 @@
-import { useState, useEffect } from "react";
-import { useParams, useLocation, Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { apiService } from "@/services/api";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { apiService } from "@/services/api";
 import {
   CheckCircle,
   Package,
   Truck,
-  MapPin,
-  Phone,
-  Mail,
-  ArrowLeft,
+  Home,
+  ShoppingBag,
   Download,
   Share2,
-  Home,
+  ArrowRight,
 } from "lucide-react";
-import { Order } from "@shared/api";
+
+interface OrderItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  price: number;
+  image: string;
+  total: number;
+}
+
+interface Order {
+  id: string;
+  orderNumber: string;
+  status: string;
+  items: OrderItem[];
+  shippingAddress: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
+  pricing: {
+    subtotal: number;
+    discount: number;
+    total: number;
+    currency: string;
+  };
+  payment: {
+    method: string;
+    status: string;
+    amount: number;
+  };
+  createdAt: string;
+}
 
 export default function OrderConfirmation() {
-  const { id } = useParams();
-  const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
   const { user } = useAuth();
-  const [order, setOrder] = useState<Order | null>(
-    location.state?.order || null,
-  );
-  const [isLoading, setIsLoading] = useState(!order);
+
+  const [order, setOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const orderId = searchParams.get("orderId");
 
   useEffect(() => {
-    if (!order && id) {
-      const fetchOrder = async () => {
-        try {
-          setIsLoading(true);
-          const response = await apiService.getMyOrder(id);
-          if (response.success) {
-            setOrder(response.data);
-          }
-        } catch (error) {
-          console.error("Error fetching order:", error);
-        } finally {
-          setIsLoading(false);
+    const fetchOrder = async () => {
+      if (!orderId) {
+        toast({
+          title: "Order Not Found",
+          description: "No order ID provided",
+          variant: "destructive",
+        });
+        navigate("/");
+        return;
+      }
+
+      try {
+        const response = await apiService.request(`/orders/${orderId}`);
+        if (response.success) {
+          setOrder(response.data);
+        } else {
+          throw new Error(response.message);
         }
-      };
+      } catch (error) {
+        console.error("Error fetching order:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch order details",
+          variant: "destructive",
+        });
+        navigate("/");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      fetchOrder();
-    }
-  }, [id, order]);
+    fetchOrder();
+  }, [orderId, navigate, toast]);
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 0,
-    }).format(price);
+  const handleContinueShopping = () => {
+    navigate("/");
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "confirmed":
-        return "bg-blue-100 text-blue-800";
-      case "processing":
-        return "bg-purple-100 text-purple-800";
-      case "shipped":
-        return "bg-indigo-100 text-indigo-800";
-      case "out_for_delivery":
-        return "bg-orange-100 text-orange-800";
-      case "delivered":
-        return "bg-green-100 text-green-800";
-      case "cancelled":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
+  const handleViewOrders = () => {
+    navigate("/customer");
+  };
+
+  const handleDownloadInvoice = () => {
+    // Simple invoice generation
+    const invoiceContent = `
+Order Invoice
+============
+
+Order Number: ${order?.orderNumber}
+Date: ${order?.createdAt ? new Date(order.createdAt).toLocaleDateString() : ""}
+Status: ${order?.status}
+
+Customer Details:
+${order?.shippingAddress.firstName} ${order?.shippingAddress.lastName}
+${order?.shippingAddress.email}
+${order?.shippingAddress.phone}
+${order?.shippingAddress.address}
+${order?.shippingAddress.city}, ${order?.shippingAddress.state} ${order?.shippingAddress.zipCode}
+
+Items:
+${order?.items.map((item) => `${item.name} x${item.quantity} - ₹${item.total}`).join("\n")}
+
+Subtotal: ₹${order?.pricing.subtotal}
+Discount: ₹${order?.pricing.discount}
+Total: ₹${order?.pricing.total}
+
+Payment Method: ${order?.payment.method}
+Payment Status: ${order?.payment.status}
+    `;
+
+    const blob = new Blob([invoiceContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `invoice-${order?.orderNumber}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Invoice Downloaded",
+      description: "Your invoice has been downloaded successfully",
+    });
+  };
+
+  const handleShareOrder = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: "My Order Confirmation",
+        text: `I just placed an order on CommerceForge! Order #${order?.orderNumber}`,
+        url: window.location.href,
+      });
+    } else {
+      // Fallback: copy to clipboard
+      navigator.clipboard.writeText(
+        `Order #${order?.orderNumber} - ${window.location.href}`,
+      );
+      toast({
+        title: "Order Link Copied",
+        description: "Order link has been copied to clipboard",
+      });
     }
   };
 
-  const getPaymentStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "bg-green-100 text-green-800";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "failed":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  if (isLoading) {
+  if (loading) {
     return (
       <Layout>
-        <div className="container py-12">
-          <div className="max-w-4xl mx-auto">
-            <div className="animate-pulse space-y-6">
-              <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="h-64 bg-gray-200 rounded"></div>
-                <div className="h-64 bg-gray-200 rounded"></div>
-              </div>
-            </div>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading order details...</p>
           </div>
         </div>
       </Layout>
@@ -113,20 +189,16 @@ export default function OrderConfirmation() {
   if (!order) {
     return (
       <Layout>
-        <div className="container py-12">
-          <Card className="max-w-md mx-auto text-center">
-            <CardContent className="p-12">
-              <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <h2 className="text-2xl font-bold mb-2">Order Not Found</h2>
-              <p className="text-muted-foreground mb-6">
-                The order you're looking for doesn't exist or you don't have
-                permission to view it.
-              </p>
-              <Button asChild>
-                <Link to="/">Back to Home</Link>
-              </Button>
-            </CardContent>
-          </Card>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Order Not Found</h2>
+            <p className="text-muted-foreground mb-6">
+              The order you're looking for doesn't exist or you don't have
+              permission to view it.
+            </p>
+            <Button onClick={() => navigate("/")}>Continue Shopping</Button>
+          </div>
         </div>
       </Layout>
     );
@@ -134,300 +206,227 @@ export default function OrderConfirmation() {
 
   return (
     <Layout>
-      <div className="container py-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/profile">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Profile
-                </Link>
-              </Button>
-              <div>
-                <h1 className="text-2xl font-bold">Order Confirmation</h1>
-                <p className="text-muted-foreground">
-                  Thank you for your order!
-                </p>
-              </div>
-            </div>
-            <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Download Invoice
-              </Button>
-              <Button variant="outline" size="sm">
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
-              </Button>
-            </div>
+      <div className="container mx-auto px-4 py-8">
+        {/* Success Header */}
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="h-8 w-8 text-green-600" />
           </div>
+          <h1 className="text-3xl font-bold mb-2">Order Confirmed!</h1>
+          <p className="text-muted-foreground">
+            Thank you for your purchase. Your order has been successfully
+            placed.
+          </p>
+        </div>
 
-          {/* Success Message */}
-          <Card className="mb-8 border-green-200 bg-green-50">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="h-8 w-8 text-green-600" />
-                <div>
-                  <h3 className="font-semibold text-green-800">
-                    Order Placed Successfully!
-                  </h3>
-                  <p className="text-green-700">
-                    Your order #{order.orderNumber} has been confirmed and is
-                    being processed.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Order Details */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Package className="h-5 w-5 mr-2" />
-                    Order Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Order Number</span>
-                    <span className="font-medium">{order.orderNumber}</span>
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Order Details */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Order Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Package className="h-5 w-5 mr-2" />
+                  Order Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Order Number</span>
+                    <span className="font-mono">{order.orderNumber}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Order Date</span>
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Order Date</span>
                     <span>
                       {new Date(order.createdAt).toLocaleDateString()}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Order Type</span>
-                    <Badge variant="outline" className="capitalize">
-                      {order.orderType}
-                    </Badge>
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Status</span>
+                    <Badge variant="outline">{order.status}</Badge>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Status</span>
-                    <Badge className={getStatusColor(order.status)}>
-                      {order.status
-                        .replace(/_/g, " ")
-                        .replace(/\b\w/g, (l) => l.toUpperCase())}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      Payment Status
-                    </span>
-                    <Badge
-                      className={getPaymentStatusColor(order.payment.status)}
-                    >
-                      {order.payment.status?.charAt(0)?.toUpperCase() +
-                        order.payment.status?.slice(1) || "Unknown"}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      Payment Method
-                    </span>
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Payment Method</span>
                     <span className="capitalize">{order.payment.method}</span>
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Shipping Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Truck className="h-5 w-5 mr-2" />
-                    Shipping Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-start space-x-3">
-                    <MapPin className="h-4 w-4 text-muted-foreground mt-1" />
-                    <div>
-                      <p className="font-medium">
-                        {order.shipping.address.name}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {order.shipping.address.street}
-                        <br />
-                        {order.shipping.address.city},{" "}
-                        {order.shipping.address.state}{" "}
-                        {order.shipping.address.pincode}
-                        <br />
-                        {order.shipping.address.country}
-                      </p>
-                    </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Payment Status</span>
+                    <Badge
+                      variant={
+                        order.payment.status === "paid"
+                          ? "default"
+                          : "secondary"
+                      }
+                    >
+                      {order.payment.status}
+                    </Badge>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      {order.shipping.address.phone}
-                    </span>
-                  </div>
-                  {order.shipping.address.email && (
-                    <div className="flex items-center space-x-3">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">
-                        {order.shipping.address.email}
-                      </span>
-                    </div>
-                  )}
-                  {order.shipping.estimatedDelivery && (
-                    <div className="pt-2 border-t">
-                      <p className="text-sm text-muted-foreground">
-                        Estimated Delivery:{" "}
-                        {new Date(
-                          order.shipping.estimatedDelivery,
-                        ).toLocaleDateString()}
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Order Items and Summary */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Order Items</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {order.items.map((item, index) => (
-                      <div key={index} className="flex items-center space-x-3">
-                        <img
-                          src={
-                            item.product?.images?.[0] ||
-                            "/placeholder-product.jpg"
-                          }
-                          alt={item.product?.name || "Product"}
-                          className="w-12 h-12 object-cover rounded"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">
-                            {item.product?.name || "Product"}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Qty: {item.quantity} × {formatPrice(item.unitPrice)}
-                          </p>
-                          {item.variant && (
-                            <p className="text-xs text-muted-foreground">
-                              {item.variant.name}: {item.variant.value}
-                            </p>
-                          )}
-                        </div>
-                        <p className="font-medium">
-                          {formatPrice(item.totalPrice)}
+            {/* Order Items */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Order Items</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {order.items.map((item, index) => (
+                    <div key={index} className="flex items-center space-x-4">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-16 h-16 object-cover rounded"
+                        onError={(e) => {
+                          e.currentTarget.src =
+                            "https://images.pexels.com/photos/2566573/pexels-photo-2566573.jpeg";
+                        }}
+                      />
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Quantity: {item.quantity}
                         </p>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                      <div className="text-right">
+                        <p className="font-medium">
+                          ₹{item.total.toLocaleString()}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          ₹{item.price.toLocaleString()} each
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Order Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
+                <Separator className="my-4" />
+
+                <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span>{formatPrice(order.pricing.subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Tax (GST)</span>
-                    <span>{formatPrice(order.pricing.tax)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Shipping</span>
-                    <span>
-                      {order.pricing.shipping === 0
-                        ? "Free"
-                        : formatPrice(order.pricing.shipping)}
-                    </span>
+                    <span>₹{order.pricing.subtotal.toLocaleString()}</span>
                   </div>
                   {order.pricing.discount > 0 && (
                     <div className="flex justify-between text-green-600">
                       <span>Discount</span>
-                      <span>-{formatPrice(order.pricing.discount)}</span>
+                      <span>-₹{order.pricing.discount.toLocaleString()}</span>
                     </div>
                   )}
-                  {order.pricing.couponDiscount > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Coupon Discount</span>
-                      <span>-{formatPrice(order.pricing.couponDiscount)}</span>
-                    </div>
-                  )}
-                  <Separator />
-                  <div className="flex justify-between font-bold text-lg">
+                  <div className="flex justify-between font-semibold text-lg">
                     <span>Total</span>
-                    <span>{formatPrice(order.pricing.total)}</span>
+                    <span>₹{order.pricing.total.toLocaleString()}</span>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </CardContent>
+            </Card>
 
-              {/* Next Steps */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>What's Next?</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
-                      1
-                    </div>
-                    <div>
-                      <p className="font-medium">Order Confirmation</p>
-                      <p className="text-sm text-muted-foreground">
-                        You'll receive an email confirmation with order details.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
-                      2
-                    </div>
-                    <div>
-                      <p className="font-medium">Order Processing</p>
-                      <p className="text-sm text-muted-foreground">
-                        We'll process your order and prepare it for shipping.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
-                      3
-                    </div>
-                    <div>
-                      <p className="font-medium">Shipping & Delivery</p>
-                      <p className="text-sm text-muted-foreground">
-                        You'll receive tracking information once your order
-                        ships.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            {/* Shipping Address */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Truck className="h-5 w-5 mr-2" />
+                  Shipping Address
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <p className="font-medium">
+                    {order.shippingAddress.firstName}{" "}
+                    {order.shippingAddress.lastName}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {order.shippingAddress.email}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {order.shippingAddress.phone}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {order.shippingAddress.address}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {order.shippingAddress.city}, {order.shippingAddress.state}{" "}
+                    {order.shippingAddress.zipCode}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {order.shippingAddress.country}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-center space-x-4 mt-8">
-            <Button asChild>
-              <Link to="/">
-                <Home className="h-4 w-4 mr-2" />
-                Continue Shopping
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link to="/profile">View My Orders</Link>
-            </Button>
+          {/* Action Sidebar */}
+          <div className="lg:col-span-1">
+            <Card className="sticky top-6">
+              <CardHeader>
+                <CardTitle>What's Next?</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <Button onClick={handleContinueShopping} className="w-full">
+                    <ShoppingBag className="h-4 w-4 mr-2" />
+                    Continue Shopping
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleViewOrders}
+                    className="w-full"
+                  >
+                    <Package className="h-4 w-4 mr-2" />
+                    View My Orders
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleDownloadInvoice}
+                    className="w-full"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Invoice
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleShareOrder}
+                    className="w-full"
+                  >
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share Order
+                  </Button>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <h4 className="font-medium">Order Updates</h4>
+                  <div className="space-y-2 text-sm">
+                    <p className="text-muted-foreground">
+                      You'll receive email updates about your order status.
+                    </p>
+                    <p className="text-muted-foreground">
+                      Track your order in your account dashboard.
+                    </p>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <h4 className="font-medium">Need Help?</h4>
+                  <div className="space-y-2 text-sm">
+                    <p className="text-muted-foreground">
+                      If you have any questions about your order, please contact
+                      our support team.
+                    </p>
+                    <Button variant="link" className="p-0 h-auto text-sm">
+                      Contact Support
+                      <ArrowRight className="h-3 w-3 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
